@@ -63,6 +63,7 @@ fun SofiaTestApp() {
             }
 
             StopwatchPage(
+                subjectName = appState.getSubject(exam.subjectId)?.name ?: "Asignatura",
                 examTitle = exam.title,
                 onBack = { screenName = Screen.EXAMS.name }
             )
