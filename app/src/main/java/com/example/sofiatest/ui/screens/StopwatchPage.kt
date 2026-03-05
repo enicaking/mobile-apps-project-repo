@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.sofiatest.ui.StopwatchScreen
 import kotlinx.coroutines.delay
+import com.example.sofiatest.notifications.NotificationHelper
 
 @Composable
 fun StopwatchPage(
@@ -23,13 +24,20 @@ fun StopwatchPage(
     onBack: () -> Unit
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
-
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notificationHelper = remember { NotificationHelper(context) }
     // Actualiza cada minuto (días/horas, sin minutos)
     LaunchedEffect(endsAtEpochMs) {
         while (true) {
             nowMs = System.currentTimeMillis()
             delay(60_000)
         }
+    }
+    LaunchedEffect(Unit) {
+        notificationHelper.showGeneralNotification(
+            "Study Started 📚",
+            "Has comenzado a estudiar $subjectName"
+        )
     }
 
     val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
