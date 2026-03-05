@@ -2,16 +2,17 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.sofiatest"
+    namespace = "es.uc3m.android.pearpressure"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.sofiatest"
+        applicationId = "es.uc3m.android.pearpressure"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -58,4 +59,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.compose.material:material-icons-extended")
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore")
 }
