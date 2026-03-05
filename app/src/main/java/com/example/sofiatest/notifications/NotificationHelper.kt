@@ -78,4 +78,34 @@ class NotificationHelper(private val context: Context) {
         NotificationManagerCompat.from(context)
             .notify(System.currentTimeMillis().toInt(), builder.build())
     }
+    fun scheduleExamReminder(
+        examTimeMs: Long,
+        title: String,
+        message: String
+    ) {
+        val reminderTime = examTimeMs - (24 * 60 * 60 * 1000) // 24h antes
+
+        if (reminderTime <= System.currentTimeMillis()) return
+
+        val intent = Intent(context, ExamReminderReceiver::class.java).apply {
+            putExtra("title", title)
+            putExtra("message", message)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminderTime.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE)
+                as android.app.AlarmManager
+
+        alarmManager.setExactAndAllowWhileIdle(
+            android.app.AlarmManager.RTC_WAKEUP,
+            reminderTime,
+            pendingIntent
+        )
+    }
 }
