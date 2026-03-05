@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "es.uc3m.android.pearpressure"
+    namespace = "com.example.pearpressure"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "es.uc3m.android.pearpressure"
+        applicationId = "com.example.pearpressure"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

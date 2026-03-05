@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:441866295167:android:7a3f751598aecfabc32c4a",
         "android_client_info": {
-          "package_name": "es.uc3m.android.pearpressure"
+          "package_name": "com.example.pearpressure"
         }
       },
       "oauth_client": [],
