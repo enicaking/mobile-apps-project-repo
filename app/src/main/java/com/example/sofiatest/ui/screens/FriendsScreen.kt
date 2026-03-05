@@ -1,0 +1,19 @@
+package com.example.sofiatest.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun FriendsScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Amigos (vacío por ahora)", style = MaterialTheme.typography.titleLarge)
+    }
+}

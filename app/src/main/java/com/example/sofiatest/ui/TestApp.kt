@@ -1,43 +1,75 @@
 package com.example.sofiatest.ui
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.example.sofiatest.ui.screens.ExamsScreen
-import com.example.sofiatest.ui.screens.StopwatchPage
-import com.example.sofiatest.ui.screens.SubjectsScreen
+import androidx.compose.ui.Modifier
+import com.example.sofiatest.ui.screens.*
 
-private enum class Screen { SUBJECTS, EXAMS, STOPWATCH }
+private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
 @Composable
 fun SofiaTestApp() {
     val appState = rememberAppState()
 
-    var screenName by rememberSaveable { mutableStateOf(Screen.SUBJECTS.name) }
+    // Tab seleccionada (menú de abajo)
+    var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                MainTabs.forEach { item ->
+                    NavigationBarItem(
+                        selected = selectedTab == item.tab,
+                        onClick = { selectedTab = item.tab },
+                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        label = { Text(item.label) }
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when (selectedTab) {
+                MainTab.HOME -> HomeFlow(appState)
+                MainTab.RANKING -> RankingScreen()
+                MainTab.FRIENDS -> FriendsScreen()
+                MainTab.PROFILE -> ProfileScreen()
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeFlow(appState: AppState) {
+    // Navegación “de Inicio” (tu flujo actual)
+    var screen by rememberSaveable { mutableStateOf(HomeScreen.SUBJECTS) }
     var selectedSubjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedExamId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val screen = Screen.valueOf(screenName)
-
     when (screen) {
-        Screen.SUBJECTS -> {
+        HomeScreen.SUBJECTS -> {
             SubjectsScreen(
                 subjects = appState.subjects,
                 onAddSubject = { name -> appState.addSubject(name) },
                 onOpenSubject = { subjectId ->
                     selectedSubjectId = subjectId
-                    screenName = Screen.EXAMS.name
+                    screen = HomeScreen.EXAMS
                 }
             )
         }
 
-        Screen.EXAMS -> {
+        HomeScreen.EXAMS -> {
             val subject = selectedSubjectId?.let { appState.getSubject(it) }
             if (subject == null) {
-                LaunchedEffect(Unit) { screenName = Screen.SUBJECTS.name }
+                screen = HomeScreen.SUBJECTS
                 return
             }
 
@@ -49,16 +81,16 @@ fun SofiaTestApp() {
                 },
                 onOpenInProgressExam = { exam ->
                     selectedExamId = exam.id
-                    screenName = Screen.STOPWATCH.name
+                    screen = HomeScreen.STOPWATCH
                 },
-                onBack = { screenName = Screen.SUBJECTS.name }
+                onBack = { screen = HomeScreen.SUBJECTS }
             )
         }
 
-        Screen.STOPWATCH -> {
+        HomeScreen.STOPWATCH -> {
             val exam = selectedExamId?.let { appState.getExam(it) }
             if (exam == null) {
-                LaunchedEffect(Unit) { screenName = Screen.SUBJECTS.name }
+                screen = HomeScreen.SUBJECTS
                 return
             }
 
@@ -66,7 +98,7 @@ fun SofiaTestApp() {
                 subjectName = appState.getSubject(exam.subjectId)?.name ?: "Asignatura",
                 examTitle = exam.title,
                 endsAtEpochMs = exam.endsAtEpochMs,
-                onBack = { screenName = Screen.EXAMS.name }
+                onBack = { screen = HomeScreen.EXAMS }
             )
         }
     }
