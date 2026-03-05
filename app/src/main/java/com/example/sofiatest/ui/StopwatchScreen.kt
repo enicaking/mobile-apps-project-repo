@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -96,6 +96,7 @@ fun StopwatchScreen(
     val boostTotal = boostCounts.values.sum()
 
     // Dialog state
+    var showPoopConfirm by remember { mutableStateOf(false) }
     var showCoffeeDialog by remember { mutableStateOf(false) }
     var selectedCoffeeType by remember { mutableStateOf(CoffeeType.LATTE) }
 
@@ -110,7 +111,7 @@ fun StopwatchScreen(
     val onQuickAction: (String) -> Unit = { action ->
         when (action) {
             "poop" -> {
-                poopCount += 1
+                showPoopConfirm = true
             }
             "coffee" -> showCoffeeDialog = true
             "boost" -> showBoostDialog = true
@@ -322,6 +323,24 @@ fun StopwatchScreen(
                 }
             }
         }
+    }
+    if (showPoopConfirm) {
+        AlertDialog(
+            onDismissRequest = { showPoopConfirm = false },
+            title = { Text("Confirm") },
+            text = { Text("Are you sure you want to add 1 poop?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        poopCount += 1
+                        showPoopConfirm = false
+                    }
+                ) { Text("Add") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showPoopConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 
     // -----------------------------
