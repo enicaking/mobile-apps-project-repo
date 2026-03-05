@@ -6,9 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,10 +30,10 @@ data class StopwatchSession(
 
 /** ✅ CAMBIA AQUÍ LOS ICONOS CUANDO QUIERAS (1 solo sitio) */
 private object QuickIcons {
-    val Counter = Icons.Filled.Add
-    val Reset = Icons.Filled.Refresh
-    val Notes = Icons.Filled.Edit
-    val Settings = Icons.Filled.Settings
+    val Poop = Icons.Filled.Add
+    val Water = Icons.Filled.WaterDrop
+    val Coffee = Icons.Filled.LocalCafe
+    val Energy = Icons.Filled.Bolt
 }
 
 @Composable
@@ -181,25 +181,18 @@ fun StopwatchScreen(
             ) {
                 QuickActionButton(
                     modifier = Modifier.weight(1f),
-                    icon = QuickIcons.Counter,
-                    title = "Contador",
+                    icon = QuickIcons.Poop,
+                    title = "Poop",
                     subtitle = counter.toString(),
                     onClick = { counter += 1 }
                 )
 
                 QuickActionButton(
                     modifier = Modifier.weight(1f),
-                    icon = QuickIcons.Reset,
-                    title = "Reset",
+                    icon = QuickIcons.Water,
+                    title = "Water",
                     subtitle = null,
-                    /* onClick = {
-                        isRunning = false
-                        accumulatedMs = 0L
-                        displayMs = 0L
-                        startElapsedMs = 0L
-                        scope.launch { snackbarHostState.showSnackbar("Cronómetro reiniciado") }
-                    }*/
-                    onClick = { onQuickAction("reset") }
+                    onClick = { onQuickAction("water") }
                 )
             }
 
@@ -209,19 +202,18 @@ fun StopwatchScreen(
             ) {
                 QuickActionButton(
                     modifier = Modifier.weight(1f),
-                    icon = QuickIcons.Notes,
-                    title = "Notas",
-                    subtitle = "Pronto",
-                    //onClick = { scope.launch { snackbarHostState.showSnackbar("Notas: próximamente") } }
-                    onClick = { onQuickAction("notes") }
-                )
+                    icon = QuickIcons.Coffee,
+                    title = "Coffee",
+                    subtitle = null,
+                    onClick = { onQuickAction("coffee") }
+                ) }
+
                 QuickActionButton(
                     modifier = Modifier.weight(1f),
-                    icon = QuickIcons.Settings,
-                    title = "Ajustes",
-                    subtitle = "Pronto",
-                    // onClick = { scope.launch { snackbarHostState.showSnackbar("Ajustes: próximamente") } }
-                    onClick = { onQuickAction("settings") }
+                    icon = QuickIcons.Energy,
+                    title = "Energy",
+                    subtitle = null,
+                    onClick = { onQuickAction("energy") }
                 )
             }
 
@@ -277,7 +269,7 @@ fun StopwatchScreen(
             }
         }
     }
-}
+
 
 @Composable
 private fun QuickActionButton(
