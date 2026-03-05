@@ -24,7 +24,7 @@ fun StopwatchPage(
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
 
-    // Actualiza cada 1 minuto (no necesitamos segundos para días/horas)
+    // Actualiza cada minuto (días/horas, sin minutos)
     LaunchedEffect(endsAtEpochMs) {
         while (true) {
             nowMs = System.currentTimeMillis()
@@ -32,12 +32,10 @@ fun StopwatchPage(
         }
     }
 
-    val diffMs = endsAtEpochMs - nowMs
-    val infoText = formatCountdownDaysHours(diffMs)
+    val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
 
     Column(modifier = Modifier.fillMaxSize()) {
-
-        // Cabecera con asignatura/examen (sin el countdown aquí)
+        // Cabecera
         Surface(tonalElevation = 2.dp) {
             Column(
                 modifier = Modifier
@@ -51,7 +49,6 @@ fun StopwatchPage(
                 ) {
                     TextButton(onClick = onBack) { Text("← Volver") }
                     Spacer(Modifier.width(8.dp))
-
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = subjectName,
@@ -73,10 +70,10 @@ fun StopwatchPage(
             }
         }
 
-        // Cronómetro + texto debajo
+        // Cronómetro + texto debajo del cronómetro
         StopwatchScreen(
-            showTitle = false,              // ya tenemos cabecera arriba
-            bottomInfoText = infoText       // ✅ debajo del cronómetro
+            showTitle = false,
+            bottomInfoText = infoText
         )
     }
 }

@@ -1,33 +1,13 @@
 package com.example.sofiatest.ui.screens
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -62,7 +42,6 @@ fun ExamsScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
     var selectedEndsAtMs by remember { mutableStateOf<Long?>(null) }
-
     var showFinishedDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -118,7 +97,7 @@ fun ExamsScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(exam.title, style = MaterialTheme.typography.titleLarge)
                                 Text(
-                                    "Finaliza: ${formatDate(exam.endsAtEpochMs)}",
+                                    "Finaliza: ${formatDateTime(exam.endsAtEpochMs)}",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -150,25 +129,38 @@ fun ExamsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val dateText = selectedEndsAtMs?.let { formatDate(it) } ?: "Sin fecha"
-                        Text("Fecha fin: $dateText", modifier = Modifier.weight(1f))
+                        val dateText = selectedEndsAtMs?.let { formatDateTime(it) } ?: "Sin fecha/hora"
+                        Text("Finaliza: $dateText", modifier = Modifier.weight(1f))
+
                         OutlinedButton(
                             onClick = {
+                                // 1) Elegir FECHA
                                 val now = Calendar.getInstance()
                                 DatePickerDialog(
                                     context,
                                     { _, year, month, day ->
-                                        val cal = Calendar.getInstance().apply {
-                                            set(Calendar.YEAR, year)
-                                            set(Calendar.MONTH, month)
-                                            set(Calendar.DAY_OF_MONTH, day)
-                                            // “finaliza” al final del día
-                                            set(Calendar.HOUR_OF_DAY, 23)
-                                            set(Calendar.MINUTE, 59)
-                                            set(Calendar.SECOND, 59)
-                                            set(Calendar.MILLISECOND, 0)
-                                        }
-                                        selectedEndsAtMs = cal.timeInMillis
+                                        // 2) Después de elegir fecha, elegimos HORA
+                                        val defaultHour = now.get(Calendar.HOUR_OF_DAY)
+                                        val defaultMinute = now.get(Calendar.MINUTE)
+
+                                        TimePickerDialog(
+                                            context,
+                                            { _, hourOfDay, minute ->
+                                                val cal = Calendar.getInstance().apply {
+                                                    set(Calendar.YEAR, year)
+                                                    set(Calendar.MONTH, month)
+                                                    set(Calendar.DAY_OF_MONTH, day)
+                                                    set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                                    set(Calendar.MINUTE, minute)
+                                                    set(Calendar.SECOND, 0)
+                                                    set(Calendar.MILLISECOND, 0)
+                                                }
+                                                selectedEndsAtMs = cal.timeInMillis
+                                            },
+                                            defaultHour,
+                                            defaultMinute,
+                                            true // 24h
+                                        ).show()
                                     },
                                     now.get(Calendar.YEAR),
                                     now.get(Calendar.MONTH),
@@ -229,7 +221,7 @@ private fun StatusPill(text: String, isPositive: Boolean) {
     }
 }
 
-private fun formatDate(epochMs: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+private fun formatDateTime(epochMs: Long): String {
+    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return formatter.format(Date(epochMs))
 }

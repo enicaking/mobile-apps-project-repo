@@ -4,6 +4,11 @@ import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -21,18 +27,38 @@ data class StopwatchSession(
     val finishedAtEpochMs: Long
 )
 
+
+/** ✅ CAMBIA AQUÍ LOS ICONOS CUANDO QUIERAS (1 solo sitio) */
+private object QuickIcons {
+    val Counter = Icons.Filled.Add
+    val Reset = Icons.Filled.Refresh
+    val Notes = Icons.Filled.Edit
+    val Settings = Icons.Filled.Settings
+}
+
 @Composable
 fun StopwatchScreen(
     modifier: Modifier = Modifier,
     showTitle: Boolean = true,
     bottomInfoText: String? = null
 ) {
+    // --- Estado del cronómetro ---
     var isRunning by remember { mutableStateOf(false) }
     var startElapsedMs by remember { mutableStateOf(0L) }
     var accumulatedMs by remember { mutableStateOf(0L) }
     var displayMs by remember { mutableStateOf(0L) }
 
+    // --- Historial ---
     val sessions = remember { mutableStateListOf<StopwatchSession>() }
+
+
+    val onQuickAction: (String) -> Unit = { /* por ahora no hace nada */ }
+
+    // --- Contador (botón 1) ---
+    var counter by remember { mutableStateOf(0) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(isRunning, startElapsedMs, accumulatedMs) {
         if (isRunning) {
@@ -46,7 +72,9 @@ fun StopwatchScreen(
         }
     }
 
-    Scaffold { padding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
         Column(
             modifier = modifier
                 .padding(padding)
@@ -62,7 +90,6 @@ fun StopwatchScreen(
                 )
             }
 
-            // Tarjeta principal con el tiempo grande
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.elevatedCardColors(
@@ -88,7 +115,7 @@ fun StopwatchScreen(
                 }
             }
 
-            // ✅ Texto debajo del cronómetro (lo que quieres)
+            // Texto opcional debajo del cronómetro (tu countdown)
             if (!bottomInfoText.isNullOrBlank()) {
                 Text(
                     text = bottomInfoText,
@@ -97,7 +124,7 @@ fun StopwatchScreen(
                 )
             }
 
-            // Botones
+            // Botones Start/Pause/Finish
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -141,6 +168,63 @@ fun StopwatchScreen(
                 ) { Text("Finish") }
             }
 
+            // ✅ 4 botones encima del historial
+            Text(
+                text = "Acciones rápidas",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Counter,
+                    title = "Contador",
+                    subtitle = counter.toString(),
+                    onClick = { counter += 1 }
+                )
+
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Reset,
+                    title = "Reset",
+                    subtitle = null,
+                    /* onClick = {
+                        isRunning = false
+                        accumulatedMs = 0L
+                        displayMs = 0L
+                        startElapsedMs = 0L
+                        scope.launch { snackbarHostState.showSnackbar("Cronómetro reiniciado") }
+                    }*/
+                    onClick = { onQuickAction("reset") }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Notes,
+                    title = "Notas",
+                    subtitle = "Pronto",
+                    //onClick = { scope.launch { snackbarHostState.showSnackbar("Notas: próximamente") } }
+                    onClick = { onQuickAction("notes") }
+                )
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Settings,
+                    title = "Ajustes",
+                    subtitle = "Pronto",
+                    // onClick = { scope.launch { snackbarHostState.showSnackbar("Ajustes: próximamente") } }
+                    onClick = { onQuickAction("settings") }
+                )
+            }
+
             // Historial
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -160,9 +244,7 @@ fun StopwatchScreen(
             if (sessions.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("Aún no hay registros", fontWeight = FontWeight.SemiBold)
@@ -191,6 +273,31 @@ fun StopwatchScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionButton(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String?,
+    onClick: () -> Unit
+) {
+    FilledTonalButton(
+        modifier = modifier.height(56.dp),
+        onClick = onClick
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = title)
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                if (!subtitle.isNullOrBlank()) {
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
