@@ -74,38 +74,36 @@ fun ExamsScreen(
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(exams) { exam ->
-                    val inProgress = nowMs < exam.endsAtEpochMs
+            // If there are only a few exams, we show a simple Column (no scrolling => no big scrollbar).
+// If there are many exams, we switch to LazyColumn (scrollable).
+            val listModifier = Modifier.fillMaxWidth()
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (inProgress) onOpenInProgressExam(exam) else showFinishedDialog = true
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(exam.title, style = MaterialTheme.typography.titleLarge)
-                                Text(
-                                    "Finaliza: ${formatDateTime(exam.endsAtEpochMs)}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            StatusPill(
-                                text = if (inProgress) "En proceso" else "Terminado",
-                                isPositive = inProgress
-                            )
-                        }
+            if (exams.size <= 6) {
+                Column(
+                    modifier = listModifier,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    exams.forEach { exam ->
+                        ExamCard(
+                            exam = exam,
+                            nowMs = nowMs,
+                            onOpenInProgressExam = onOpenInProgressExam,
+                            onOpenFinishedExam = { showFinishedDialog = true }
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = listModifier,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(exams) { exam ->
+                        ExamCard(
+                            exam = exam,
+                            nowMs = nowMs,
+                            onOpenInProgressExam = onOpenInProgressExam,
+                            onOpenFinishedExam = { showFinishedDialog = true }
+                        )
                     }
                 }
             }
@@ -199,6 +197,42 @@ fun ExamsScreen(
     }
 }
 
+@Composable
+private fun ExamCard(
+    exam: Exam,
+    nowMs: Long,
+    onOpenInProgressExam: (Exam) -> Unit,
+    onOpenFinishedExam: () -> Unit
+) {
+    val inProgress = nowMs < exam.endsAtEpochMs
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                if (inProgress) onOpenInProgressExam(exam) else onOpenFinishedExam()
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(exam.title, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Finaliza: ${formatDateTime(exam.endsAtEpochMs)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            StatusPill(
+                text = if (inProgress) "En proceso" else "Terminado",
+                isPositive = inProgress
+            )
+        }
+    }
+}
 @Composable
 private fun StatusPill(text: String, isPositive: Boolean) {
     val bg = if (isPositive) MaterialTheme.colorScheme.secondaryContainer
