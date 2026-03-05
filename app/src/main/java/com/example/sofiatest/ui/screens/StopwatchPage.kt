@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.sofiatest.ui.StopwatchScreen
 import kotlinx.coroutines.delay
+import com.example.sofiatest.notifications.NotificationHelper
 
 @Composable
 fun StopwatchPage(
@@ -23,7 +24,19 @@ fun StopwatchPage(
     onBack: () -> Unit
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notificationHelper = remember { NotificationHelper(context) }
+    var examReminderShown by remember { mutableStateOf(false) }
+    val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
+    val remainingMs = endsAtEpochMs - nowMs
 
+    LaunchedEffect(endsAtEpochMs) {
+        notificationHelper.scheduleExamReminder(
+            examTimeMs = endsAtEpochMs,
+            title = "Exam Tomorrow 📚",
+            message = "Tu examen de $subjectName es en 24 horas."
+        )
+    }
     // Actualiza cada minuto (días/horas, sin minutos)
     LaunchedEffect(endsAtEpochMs) {
         while (true) {
@@ -31,8 +44,21 @@ fun StopwatchPage(
             delay(60_000)
         }
     }
+    LaunchedEffect(remainingMs) {
+        val oneDayMs = 24 * 60 * 60 * 1000
 
-    val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
+        if (remainingMs in 1..oneDayMs && !examReminderShown) {
+            examReminderShown = true
+            notificationHelper.showReminderNotification(
+                "Exam Soon 📚",
+                "Tu examen de $subjectName es en menos de 24 horas."
+            )
+        }
+    }
+
+
+
+
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Cabecera
