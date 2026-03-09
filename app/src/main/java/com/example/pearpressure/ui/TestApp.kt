@@ -8,12 +8,32 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import com.example.pearpressure.ui.screens.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.example.pearpressure.notifications.ExamReminderScheduler
 
 private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
 @Composable
 fun SofiaTestApp() {
     val appState = rememberAppState()
+
+    val context = LocalContext.current
+
+    LaunchedEffect(appState.exams.size, appState.subjects.size) {
+        // Schedule (or re-schedule) reminders for all current exams
+        appState.subjects.forEach { subject ->
+            appState.examsForSubject(subject.id).forEach { exam ->
+                ExamReminderScheduler.scheduleOneDayBefore(
+                    context = context.applicationContext,
+                    examId = exam.id,
+                    subjectName = subject.name,
+                    examTitle = exam.title,
+                    examEndsAtMs = exam.endsAtEpochMs
+                )
+            }
+        }
+    }
 
     // Tab seleccionada (menú de abajo)
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }

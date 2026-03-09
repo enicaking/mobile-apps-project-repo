@@ -14,7 +14,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.ui.StopwatchScreen
 import kotlinx.coroutines.delay
-import com.example.pearpressure.notifications.NotificationHelper
 
 @Composable
 fun StopwatchPage(
@@ -24,44 +23,19 @@ fun StopwatchPage(
     onBack: () -> Unit
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val notificationHelper = remember { NotificationHelper(context) }
-    var examReminderShown by remember { mutableStateOf(false) }
-    val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
-    val remainingMs = endsAtEpochMs - nowMs
 
-    LaunchedEffect(endsAtEpochMs) {
-        notificationHelper.scheduleExamReminder(
-            examTimeMs = endsAtEpochMs,
-            title = "Exam Tomorrow 📚",
-            message = "Tu examen de $subjectName es en 24 horas."
-        )
-    }
-    // Actualiza cada minuto (días/horas, sin minutos)
+    // Update every minute (days/hours only)
     LaunchedEffect(endsAtEpochMs) {
         while (true) {
             nowMs = System.currentTimeMillis()
             delay(60_000)
         }
     }
-    LaunchedEffect(remainingMs) {
-        val oneDayMs = 24 * 60 * 60 * 1000
 
-        if (remainingMs in 1..oneDayMs && !examReminderShown) {
-            examReminderShown = true
-            notificationHelper.showReminderNotification(
-                "Exam Soon 📚",
-                "Tu examen de $subjectName es en menos de 24 horas."
-            )
-        }
-    }
-
-
-
-
+    val countdownText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Cabecera
+        // Header
         Surface(tonalElevation = 2.dp) {
             Column(
                 modifier = Modifier
@@ -73,8 +47,9 @@ fun StopwatchPage(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onBack) { Text("← Volver") }
+                    TextButton(onClick = onBack) { Text("← Back") }
                     Spacer(Modifier.width(8.dp))
+
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = subjectName,
@@ -96,24 +71,24 @@ fun StopwatchPage(
             }
         }
 
-        // Cronómetro + texto debajo del cronómetro
+        // Stopwatch (no title, countdown under the timer card)
         StopwatchScreen(
             showTitle = false,
-            bottomInfoText = infoText
+            bottomInfoText = countdownText
         )
     }
 }
 
 private fun formatCountdownDaysHours(diffMs: Long): String {
-    if (diffMs <= 0L) return "El examen ya ha finalizado."
+    if (diffMs <= 0L) return "The exam has already ended."
 
     val totalHours = diffMs / (1000L * 60 * 60)
     val days = totalHours / 24
     val hours = totalHours % 24
 
     return when {
-        days > 0 && hours > 0 -> "Quedan $days día(s) y $hours hora(s) para el examen."
-        days > 0 -> "Quedan $days día(s) para el examen."
-        else -> "Quedan $hours hora(s) para el examen."
+        days > 0 && hours > 0 -> "Remaining: $days day(s) and $hours hour(s)."
+        days > 0 -> "Remaining: $days day(s)."
+        else -> "Remaining: $hours hour(s)."
     }
 }
