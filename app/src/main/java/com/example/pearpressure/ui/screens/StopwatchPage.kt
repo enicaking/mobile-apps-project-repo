@@ -23,8 +23,9 @@ fun StopwatchPage(
     onBack: () -> Unit
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
 
-    // Update every minute (days/hours only)
+    // Actualiza cada minuto (días/horas, sin minutos)
     LaunchedEffect(endsAtEpochMs) {
         while (true) {
             nowMs = System.currentTimeMillis()
@@ -32,10 +33,8 @@ fun StopwatchPage(
         }
     }
 
-    val countdownText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
-
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
+        // Cabecera
         Surface(tonalElevation = 2.dp) {
             Column(
                 modifier = Modifier
@@ -47,9 +46,8 @@ fun StopwatchPage(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onBack) { Text("← Back") }
+                    TextButton(onClick = onBack) { Text("← Volver") }
                     Spacer(Modifier.width(8.dp))
-
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = subjectName,
@@ -71,24 +69,24 @@ fun StopwatchPage(
             }
         }
 
-        // Stopwatch (no title, countdown under the timer card)
+        // Cronómetro + texto debajo del cronómetro
         StopwatchScreen(
             showTitle = false,
-            bottomInfoText = countdownText
+            bottomInfoText = infoText
         )
     }
 }
 
 private fun formatCountdownDaysHours(diffMs: Long): String {
-    if (diffMs <= 0L) return "The exam has already ended."
+    if (diffMs <= 0L) return "El examen ya ha finalizado."
 
     val totalHours = diffMs / (1000L * 60 * 60)
     val days = totalHours / 24
     val hours = totalHours % 24
 
     return when {
-        days > 0 && hours > 0 -> "Remaining: $days day(s) and $hours hour(s)."
-        days > 0 -> "Remaining: $days day(s)."
-        else -> "Remaining: $hours hour(s)."
+        days > 0 && hours > 0 -> "Quedan $days día(s) y $hours hora(s) para el examen."
+        days > 0 -> "Quedan $days día(s) para el examen."
+        else -> "Quedan $hours hora(s) para el examen."
     }
 }
