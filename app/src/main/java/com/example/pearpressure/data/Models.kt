@@ -1,7 +1,6 @@
 package com.example.pearpressure.data
 
 import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.Exclude
 
 data class Subject(
     @DocumentId var id: String = "",
