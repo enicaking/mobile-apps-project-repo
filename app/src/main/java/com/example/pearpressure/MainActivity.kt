@@ -1,35 +1,43 @@
 package com.example.pearpressure
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.pearpressure.ui.SofiaTestApp
 import com.example.pearpressure.ui.theme.SofiaTestTheme
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        setContent {
-            val permissionLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
-            ) { }
-
-            LaunchedEffect(Unit) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                }
+        // ── ADD THIS BLOCK to test Firebase ──
+        viewModel.addSubject("Mathematics")
+        lifecycleScope.launch {
+            viewModel.subjects.collect { subjects ->
+                Log.d("Firebase", "Subjects: $subjects")
             }
+        }
+        lifecycleScope.launch {
+            viewModel.error.collect { err ->
+                err?.let { Log.e("Firebase", "Error: $it") }
+            }
+        }
+        viewModel.loadSubjects()
+        // ─────────────────────────────────────
+
+        setContent {
             SofiaTestTheme {
                 SofiaTestApp()
             }
-
         }
     }
 }
