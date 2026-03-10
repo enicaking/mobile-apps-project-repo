@@ -1,51 +1,43 @@
 package com.example.pearpressure
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.example.pearpressure.notifications.NotificationUtils
-import com.example.pearpressure.ui.SofiaTestApp // or your TestApp()
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.example.pearpressure.ui.SofiaTestApp
 import com.example.pearpressure.ui.theme.SofiaTestTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Create the notification channel
-        NotificationUtils.createExamReminderChannel(this)
-
-        // Ask for notification permission on Android 13+
-        requestPostNotificationsPermissionIfNeeded()
+        // ── ADD THIS BLOCK to test Firebase ──
+        viewModel.addSubject("Mathematics")
+        lifecycleScope.launch {
+            viewModel.subjects.collect { subjects ->
+                Log.d("Firebase", "Subjects: $subjects")
+            }
+        }
+        lifecycleScope.launch {
+            viewModel.error.collect { err ->
+                err?.let { Log.e("Firebase", "Error: $it") }
+            }
+        }
+        viewModel.loadSubjects()
+        // ─────────────────────────────────────
 
         setContent {
             SofiaTestTheme {
-                SofiaTestApp() // if yours is TestApp(), call TestApp()
+                SofiaTestApp()
             }
-        }
-    }
-
-    private fun requestPostNotificationsPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < 33) return
-
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!granted) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                1001
-            )
         }
     }
 }
