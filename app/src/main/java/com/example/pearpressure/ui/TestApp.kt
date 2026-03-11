@@ -7,14 +7,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.ui.screens.*
 
 private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
 @Composable
-fun SofiaTestApp() {
-    val appState = rememberAppState()
-
+fun SofiaTestApp(viewModel: MainViewModel = viewModel()) {
     // Tab seleccionada (menú de abajo)
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
 
@@ -38,7 +38,7 @@ fun SofiaTestApp() {
                 .padding(innerPadding)
         ) {
             when (selectedTab) {
-                MainTab.HOME -> HomeFlow(appState)
+                MainTab.HOME -> HomeFlow(viewModel)
                 MainTab.RANKING -> RankingScreen()
                 MainTab.FRIENDS -> FriendsScreen()
                 MainTab.PROFILE -> ProfileScreen()
@@ -48,26 +48,29 @@ fun SofiaTestApp() {
 }
 
 @Composable
-private fun HomeFlow(appState: AppState) {
-    // Navegación “de Inicio” (tu flujo actual)
+private fun HomeFlow(viewModel: MainViewModel) {
     var screen by rememberSaveable { mutableStateOf(HomeScreen.SUBJECTS) }
     var selectedSubjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedExamId by rememberSaveable { mutableStateOf<String?>(null) }
 
+    val subjects by viewModel.subjects.collectAsState()
+    val exams by viewModel.exams.collectAsState()
+
     when (screen) {
         HomeScreen.SUBJECTS -> {
             SubjectsScreen(
-                subjects = appState.subjects,
-                onAddSubject = { name -> appState.addSubject(name) },
+                subjects = subjects,
+                onAddSubject = { name -> viewModel.addSubject(name) },
                 onOpenSubject = { subjectId ->
                     selectedSubjectId = subjectId
+                    viewModel.loadExams(subjectId)
                     screen = HomeScreen.EXAMS
                 }
             )
         }
 
         HomeScreen.EXAMS -> {
-            val subject = selectedSubjectId?.let { appState.getSubject(it) }
+            val subject = selectedSubjectId?.let { viewModel.getSubjectById(it) }
             if (subject == null) {
                 screen = HomeScreen.SUBJECTS
                 return
@@ -75,9 +78,9 @@ private fun HomeFlow(appState: AppState) {
 
             ExamsScreen(
                 subjectName = subject.name,
-                exams = appState.examsForSubject(subject.id),
+                exams = exams,
                 onAddExam = { title, endsAtMs ->
-                    appState.addExam(subjectId = subject.id, title = title, endsAtEpochMs = endsAtMs)
+                    viewModel.addExam(subjectId = subject.id, title = title, endsAtMs = endsAtMs)
                 },
                 onOpenInProgressExam = { exam ->
                     selectedExamId = exam.id
@@ -88,14 +91,16 @@ private fun HomeFlow(appState: AppState) {
         }
 
         HomeScreen.STOPWATCH -> {
-            val exam = selectedExamId?.let { appState.getExam(it) }
-            if (exam == null) {
+            val exam = selectedExamId?.let { viewModel.getExamById(it) }
+            val subject = selectedSubjectId?.let { viewModel.getSubjectById(it) }
+            
+            if (exam == null || subject == null) {
                 screen = HomeScreen.SUBJECTS
                 return
             }
 
             StopwatchPage(
-                subjectName = appState.getSubject(exam.subjectId)?.name ?: "Asignatura",
+                subjectName = subject.name,
                 examTitle = exam.title,
                 endsAtEpochMs = exam.endsAtEpochMs,
                 onBack = { screen = HomeScreen.EXAMS }
