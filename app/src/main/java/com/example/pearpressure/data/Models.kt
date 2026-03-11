@@ -1,15 +1,16 @@
 package com.example.pearpressure.data
 
-import java.util.UUID
+import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.Exclude
 
 data class Subject(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String = ""  // ← add default values to ALL fields
+    @DocumentId @get:Exclude var id: String = "",
+    var name: String = ""
 )
 
 data class Exam(
-    val id: String = UUID.randomUUID().toString(),
-    val subjectId: String = "",
-    val title: String = "",
-    val endsAtEpochMs: Long = 0L
+    @DocumentId @get:Exclude var id: String = "",
+    var subjectId: String = "",
+    var title: String = "",
+    var endsAtEpochMs: Long = 0L
 )

@@ -19,24 +19,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // ── ADD THIS BLOCK to test Firebase ──
-        viewModel.addSubject("Mathematics")
-        lifecycleScope.launch {
-            viewModel.subjects.collect { subjects ->
-                Log.d("Firebase", "Subjects: $subjects")
-            }
-        }
         lifecycleScope.launch {
             viewModel.error.collect { err ->
                 err?.let { Log.e("Firebase", "Error: $it") }
             }
         }
-        viewModel.loadSubjects()
-        // ─────────────────────────────────────
 
         setContent {
             SofiaTestTheme {
-                SofiaTestApp()
+                SofiaTestApp(viewModel = viewModel)
             }
         }
     }
