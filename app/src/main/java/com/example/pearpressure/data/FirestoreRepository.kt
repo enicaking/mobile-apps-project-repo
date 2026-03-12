@@ -16,9 +16,9 @@ class FirestoreRepository {
         // If subject.id is empty, Firestore will generate one. 
         // If it has one (e.g. from @DocumentId), it will use it.
         if (subject.id.isEmpty()) {
-            db.collection("subjects")
-                .add(subject)
-                .await()
+            val docRef = db.collection("subjects").document()
+            val subjectWithId = subject.copy(id = docRef.id)
+            docRef.set(subjectWithId).await()
         } else {
             db.collection("subjects")
                 .document(subject.id)
@@ -34,20 +34,36 @@ class FirestoreRepository {
             .toObjects(Subject::class.java)
     }
 
+
     suspend fun deleteSubject(subjectId: String): Result<Unit> = runCatching {
-        db.collection("subjects")
-            .document(subjectId)
-            .delete()
+
+        // 1. Find exams belonging to the subject
+        val examsSnapshot = db.collection("exams")
+            .whereEqualTo("subjectId", subjectId)
+            .get()
             .await()
+
+        // 2. Delete exams
+        val batch = db.batch()
+        examsSnapshot.documents.forEach { doc ->
+            batch.delete(doc.reference)
+        }
+
+        // 3. Delete subject
+        val subjectRef = db.collection("subjects").document(subjectId)
+        batch.delete(subjectRef)
+
+        // 4. Commit batch
+        batch.commit().await()
     }
 
     // ── EXAMS ─────────────────────────────────────────────
 
     suspend fun addExam(exam: Exam): Result<Unit> = runCatching {
         if (exam.id.isEmpty()) {
-            db.collection("exams")
-                .add(exam)
-                .await()
+            val docRef = db.collection("exams").document()
+            val examWithId = exam.copy(id = docRef.id)
+            docRef.set(examWithId).await()
         } else {
             db.collection("exams")
                 .document(exam.id)
