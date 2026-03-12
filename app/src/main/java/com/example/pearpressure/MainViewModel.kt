@@ -2,9 +2,9 @@ package com.example.pearpressure
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.pearpressure.data.Exam
 import com.example.pearpressure.data.FirestoreRepository
 import com.example.pearpressure.data.Subject
+import com.example.pearpressure.data.Exam
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -68,5 +68,15 @@ class MainViewModel : ViewModel() {
 
     fun getExamById(id: String): Exam? {
         return _exams.value.find { it.id == id }
+    }
+
+    fun deleteSubject(subjectId: String) = viewModelScope.launch {
+        repo.deleteSubject(subjectId)
+            .onFailure { _error.value = it.message }
+    }
+
+    fun deleteExam(examId: String) = viewModelScope.launch {
+        repo.deleteExam(examId)
+            .onFailure { _error.value = it.message }
     }
 }
