@@ -45,22 +45,22 @@ fun SubjectsScreen(
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Asignaturas",
+                text = "Subjects",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.weight(1f))
             Button(onClick = { showDialog = true }) {
-                Text("Nueva")
+                Text("Add Subject")
             }
         }
 
         if (subjects.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text("No hay asignaturas todavía.", fontWeight = FontWeight.SemiBold)
+                    Text("No subjects yet!", fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(4.dp))
-                    Text("Pulsa “Nueva” para crear la primera.")
+                    Text("Click 'Add Subject' to add your first one.")
                 }
             }
         } else {
@@ -77,7 +77,7 @@ fun SubjectsScreen(
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(text = s.name, style = MaterialTheme.typography.titleLarge)
                             Text(
-                                text = "Toca para ver exámenes",
+                                text = "Click to view exams",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -90,13 +90,13 @@ fun SubjectsScreen(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Nueva asignatura") },
+            title = { Text("New subject") },
             text = {
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
                     singleLine = true,
-                    label = { Text("Nombre") }
+                    label = { Text("Name") }
                 )
             },
             confirmButton = {
@@ -107,10 +107,10 @@ fun SubjectsScreen(
                         showDialog = false
                     },
                     enabled = newName.trim().isNotEmpty()
-                ) { Text("Guardar") }
+                ) { Text("Save") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDialog = false }) { Text("Cancelar") }
+                OutlinedButton(onClick = { showDialog = false }) { Text("Cancel") }
             }
         )
     }
