@@ -7,9 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.pearpressure"
-    compileSdk {
-        version = release(36)
-    }
+    // Corregido: Simplemente el número
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.pearpressure"
@@ -30,13 +29,17 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    // Actualizado para evitar los avisos de "deprecated"
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
@@ -64,4 +67,6 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
+    //notifications
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }
