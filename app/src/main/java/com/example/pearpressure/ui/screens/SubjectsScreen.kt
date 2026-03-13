@@ -11,9 +11,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -23,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,11 +38,16 @@ import com.example.pearpressure.data.Subject
 @Composable
 fun SubjectsScreen(
     subjects: List<Subject>,
+    currentUserId: String, // Necesario para saber si eres el owner
     onAddSubject: (String) -> Unit,
-    onOpenSubject: (String) -> Unit
+    onOpenSubject: (String) -> Unit,
+    onActionSubject: (Subject) -> Unit // Maneja borrar o salir
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
+
+    // Estado para controlar el diálogo de confirmación de borrado/abandono
+    var subjectToAction by remember { mutableStateOf<Subject?>(null) }
 
     Column(
         modifier = Modifier
@@ -69,17 +81,42 @@ fun SubjectsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(subjects) { s ->
+                    val isOwner = s.ownerId == currentUserId
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onOpenSubject(s.id) }
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(text = s.name, style = MaterialTheme.typography.titleLarge)
-                            Text(
-                                text = "Click to view exams",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = s.name, style = MaterialTheme.typography.titleLarge)
+                                Text(
+                                    text = if (isOwner) "Owner • Tap to view exams" else "Member • Tap to view exams",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+
+                            // Botón dinámico: Abre el diálogo de confirmación
+                            IconButton(onClick = { subjectToAction = s }) {
+                                Icon(
+                                    imageVector = if (isOwner)
+                                        Icons.Default.Delete
+                                    else
+                                        Icons.AutoMirrored.Filled.ExitToApp,
+                                    contentDescription = if (isOwner) "Delete" else "Leave",
+                                    tint = if (isOwner)
+                                        MaterialTheme.colorScheme.error
+                                    else
+                                        MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -87,6 +124,7 @@ fun SubjectsScreen(
         }
     }
 
+    // Diálogo para crear nueva asignatura
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -111,6 +149,43 @@ fun SubjectsScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Diálogo de confirmación de Borrado o Salida
+    subjectToAction?.let { subject ->
+        val isOwner = subject.ownerId == currentUserId
+        AlertDialog(
+            onDismissRequest = { subjectToAction = null },
+            title = {
+                Text(text = if (isOwner) "Delete Subject" else "Leave Subject")
+            },
+            text = {
+                Text(
+                    text = if (isOwner)
+                        "Are you sure you want to delete '${subject.name}'? This action will permanently remove the subject and all associated exams."
+                    else
+                        "Are you sure you want to leave '${subject.name}'? You will no longer have access to this subject's data."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onActionSubject(subject)
+                        subjectToAction = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isOwner) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(text = if (isOwner) "Delete" else "Leave")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { subjectToAction = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }

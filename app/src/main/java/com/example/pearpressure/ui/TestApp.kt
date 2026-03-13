@@ -58,7 +58,7 @@ fun SofiaTestApp(viewModel: MainViewModel = viewModel()) {
                 }
             }
         }
-        // --- THIS IS YOUR ORIGINAL CODE END ---
+
     }
 }
 
@@ -75,11 +75,15 @@ private fun HomeFlow(viewModel: MainViewModel) {
         HomeScreen.SUBJECTS -> {
             SubjectsScreen(
                 subjects = subjects,
+                currentUserId = viewModel.getCurrentUserId(), // <--- AÑADIDO
                 onAddSubject = { name -> viewModel.addSubject(name) },
                 onOpenSubject = { subjectId ->
                     selectedSubjectId = subjectId
                     viewModel.loadExams(subjectId)
                     screen = HomeScreen.EXAMS
+                },
+                onActionSubject = { subject -> // <--- AÑADIDO
+                    viewModel.deleteOrLeaveSubject(subject)
                 }
             )
         }
@@ -100,6 +104,9 @@ private fun HomeFlow(viewModel: MainViewModel) {
                 onOpenInProgressExam = { exam ->
                     selectedExamId = exam.id
                     screen = HomeScreen.STOPWATCH
+                },
+                onDeleteExam = { examId -> //to deete exam
+                    viewModel.deleteExam(examId)
                 },
                 onBack = { screen = HomeScreen.SUBJECTS }
             )

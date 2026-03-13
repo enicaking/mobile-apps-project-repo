@@ -37,6 +37,11 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    //FUNCTION to know if the current user is the owner later
+    fun getCurrentUserId(): String {
+        return authRepo.currentUser?.uid ?: ""
+    }
+
     // Función auxiliar para conectar el listener con el ID del usuario
     private fun startListening(userId: String) {
         subjectsListener?.remove()
@@ -136,10 +141,17 @@ class MainViewModel : ViewModel() {
     fun getExamById(id: String): Exam? {
         return _exams.value.find { it.id == id }
     }
+    //eliminar subject if owner, leave if non owner
+    fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
+        val currentUserId = authRepo.currentUser?.uid ?: return@launch
 
-    fun deleteSubject(subjectId: String) = viewModelScope.launch {
-        repo.deleteSubject(subjectId)
-            .onFailure { _error.value = it.message }
+        if (subject.ownerId == currentUserId) {
+            // Si soy el dueño, borro todo (lo que ya tenías)
+            repo.deleteSubject(subject.id).onFailure { _error.value = it.message }
+        } else {
+            // Si no soy el dueño, solo me salgo
+            repo.leaveSubject(subject.id, currentUserId).onFailure { _error.value = it.message }
+        }
     }
 
     fun deleteExam(examId: String) = viewModelScope.launch {

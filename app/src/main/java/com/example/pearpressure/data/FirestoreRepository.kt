@@ -55,20 +55,25 @@ class FirestoreRepository {
         // 4. Execute all at once
         batch.commit().await()
     }
+    //LEAVE, for the non owner users of a subject
+    suspend fun leaveSubject(subjectId: String, userId: String): Result<Unit> = runCatching {
+        // Usamos FieldValue.arrayRemove para quitar el ID del usuario de la lista de miembros
+        db.collection("subjects").document(subjectId)
+            .update("members", com.google.firebase.firestore.FieldValue.arrayRemove(userId))
+            .await()
+        Unit
+    }
 
     // ── EXAMS ─────────────────────────────────────────────
 
     suspend fun addExam(exam: Exam): Result<Unit> = runCatching {
+        // Si el ID está vacío, usamos .add(). Si ya tiene ID (porque es edición), usamos .set()
         if (exam.id.isEmpty()) {
-            db.collection("exams")
-                .add(exam)
-                .await()
+            db.collection("exams").add(exam).await()
         } else {
-            db.collection("exams")
-                .document(exam.id)
-                .set(exam)
-                .await()
+            db.collection("exams").document(exam.id).set(exam).await()
         }
+        Unit
     }
 
     suspend fun getExamsForSubject(subjectId: String): Result<List<Exam>> = runCatching {
@@ -111,9 +116,6 @@ class FirestoreRepository {
     suspend fun createUserProfile(user: UserProfile) = runCatching {
         db.collection("users").document(user.uid).set(user).await()
     }  //for storing when creating user
-
-
-
 
 }
 

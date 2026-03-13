@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete // AÑADIDO
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +29,7 @@ fun ExamsScreen(
     exams: List<Exam>,
     onAddExam: (title: String, endsAtMs: Long) -> Unit,
     onOpenInProgressExam: (Exam) -> Unit,
+    onDeleteExam: (String) -> Unit, // AÑADIDO
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -45,6 +47,9 @@ fun ExamsScreen(
     var newTitle by remember { mutableStateOf("") }
     var selectedEndsAtMs by remember { mutableStateOf<Long?>(null) }
     var showFinishedDialog by remember { mutableStateOf(false) }
+
+    // Estado para controlar qué examen se quiere borrar y mostrar el diálogo
+    var examToDelete by remember { mutableStateOf<Exam?>(null) }
 
     Column(
         modifier = Modifier
@@ -95,14 +100,15 @@ fun ExamsScreen(
                         exam = exam,
                         nowMs = nowMs,
                         onOpenInProgressExam = onOpenInProgressExam,
-                        onOpenFinishedExam = { showFinishedDialog = true }
+                        onOpenFinishedExam = { showFinishedDialog = true },
+                        onDelete = { examToDelete = exam } // Cambiado para abrir diálogo
                     )
                 }
             }
         }
     }
 
-    // New Exam Dialog
+
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
@@ -184,6 +190,31 @@ fun ExamsScreen(
             }
         )
     }
+
+    // Confirmation dialog for deleting an exam
+    examToDelete?.let { exam ->
+        AlertDialog(
+            onDismissRequest = { examToDelete = null },
+            title = { Text("Delete Exam") },
+            text = { Text("Are you sure you want to delete '${exam.title}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteExam(exam.id)
+                        examToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { examToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -191,7 +222,8 @@ private fun ExamCard(
     exam: Exam,
     nowMs: Long,
     onOpenInProgressExam: (Exam) -> Unit,
-    onOpenFinishedExam: () -> Unit
+    onOpenFinishedExam: () -> Unit,
+    onDelete: () -> Unit //to delete exam
 ) {
     val inProgress = nowMs < exam.endsAtEpochMs
 
@@ -220,13 +252,28 @@ private fun ExamCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            StatusPill(
-                text = if (inProgress) "In Progress" else "Finished",
-                isPositive = inProgress
-            )
+
+            // Fila para el status pill y el botón de borrar
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusPill(
+                    text = if (inProgress) "In Progress" else "Finished",
+                    isPositive = inProgress
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Exam",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }
+
 
 @Composable
 private fun StatusPill(text: String, isPositive: Boolean) {
