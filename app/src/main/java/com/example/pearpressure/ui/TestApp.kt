@@ -15,35 +15,50 @@ private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
 @Composable
 fun SofiaTestApp(viewModel: MainViewModel = viewModel()) {
-    // Tab seleccionada (menú de abajo)
-    var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
+    // 1. New state to track if we are logged in
+    var isLoggedIn by remember { mutableStateOf(viewModel.isUserLoggedIn()) }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                MainTabs.forEach { item ->
-                    NavigationBarItem(
-                        selected = selectedTab == item.tab,
-                        onClick = { selectedTab = item.tab },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
+    // 2. Logic: If NOT logged in, show LoginScreen. If logged in, show the app.
+    if (!isLoggedIn) {
+        LoginScreen(
+            onLoginSuccess = { isLoggedIn = true },
+            viewModel = viewModel
+        )
+    } else {
+        //showing the app when logged in:
+        var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
+
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    MainTabs.forEach { item ->
+                        NavigationBarItem(
+                            selected = selectedTab == item.tab,
+                            onClick = { selectedTab = item.tab },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                when (selectedTab) {
+                    MainTab.HOME -> HomeFlow(viewModel)
+                    MainTab.RANKING -> RankingScreen()
+                    MainTab.FRIENDS -> FriendsScreen()
+                    MainTab.PROFILE -> ProfileScreen(
+                        viewModel = viewModel,
+                        onLogout = { isLoggedIn = false } // This sends the user back to LoginScreen
                     )
                 }
             }
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when (selectedTab) {
-                MainTab.HOME -> HomeFlow(viewModel)
-                MainTab.RANKING -> RankingScreen()
-                MainTab.FRIENDS -> FriendsScreen()
-                MainTab.PROFILE -> ProfileScreen()
-            }
-        }
+
     }
 }
 
@@ -60,11 +75,15 @@ private fun HomeFlow(viewModel: MainViewModel) {
         HomeScreen.SUBJECTS -> {
             SubjectsScreen(
                 subjects = subjects,
+                currentUserId = viewModel.getCurrentUserId(), // <--- AÑADIDO
                 onAddSubject = { name -> viewModel.addSubject(name) },
                 onOpenSubject = { subjectId ->
                     selectedSubjectId = subjectId
                     viewModel.loadExams(subjectId)
                     screen = HomeScreen.EXAMS
+                },
+                onActionSubject = { subject -> // <--- AÑADIDO
+                    viewModel.deleteOrLeaveSubject(subject)
                 }
             )
         }
@@ -86,6 +105,9 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     selectedExamId = exam.id
                     screen = HomeScreen.STOPWATCH
                 },
+                onDeleteExam = { examId -> //to deete exam
+                    viewModel.deleteExam(examId)
+                },
                 onBack = { screen = HomeScreen.SUBJECTS }
             )
         }
@@ -93,7 +115,7 @@ private fun HomeFlow(viewModel: MainViewModel) {
         HomeScreen.STOPWATCH -> {
             val exam = selectedExamId?.let { viewModel.getExamById(it) }
             val subject = selectedSubjectId?.let { viewModel.getSubjectById(it) }
-            
+
             if (exam == null || subject == null) {
                 screen = HomeScreen.SUBJECTS
                 return

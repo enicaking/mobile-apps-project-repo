@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete // AÑADIDO
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,15 +29,16 @@ fun ExamsScreen(
     exams: List<Exam>,
     onAddExam: (title: String, endsAtMs: Long) -> Unit,
     onOpenInProgressExam: (Exam) -> Unit,
+    onDeleteExam: (String) -> Unit, // AÑADIDO
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
 
-    // Para que “En proceso/Terminado” se actualice con el tiempo.
+    // Update "In Progress / Finished" status every minute
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000) // cada minuto
+            delay(60_000)
             nowMs = System.currentTimeMillis()
         }
     }
@@ -44,120 +48,110 @@ fun ExamsScreen(
     var selectedEndsAtMs by remember { mutableStateOf<Long?>(null) }
     var showFinishedDialog by remember { mutableStateOf(false) }
 
+    // Estado para controlar qué examen se quiere borrar y mostrar el diálogo
+    var examToDelete by remember { mutableStateOf<Exam?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp)
     ) {
+        // Header
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = onBack) { Text("← Asignaturas") }
-            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
             Text(
                 text = subjectName,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.weight(1f))
-            Button(onClick = { showCreateDialog = true }) { Text("Nuevo examen") }
+            Button(onClick = {
+                newTitle = ""
+                selectedEndsAtMs = null
+                showCreateDialog = true
+            }) {
+                Text("Add Exam")
+            }
         }
 
         if (exams.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text("No hay exámenes todavía.", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Pulsa “Nuevo examen” para crear el primero.")
-                }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No exams found.\nTap 'Add Exam' to create one.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         } else {
-            // If there are only a few exams, we show a simple Column (no scrolling => no big scrollbar).
-// If there are many exams, we switch to LazyColumn (scrollable).
-            val listModifier = Modifier.fillMaxWidth()
-
-            if (exams.size <= 6) {
-                Column(
-                    modifier = listModifier,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    exams.forEach { exam ->
-                        ExamCard(
-                            exam = exam,
-                            nowMs = nowMs,
-                            onOpenInProgressExam = onOpenInProgressExam,
-                            onOpenFinishedExam = { showFinishedDialog = true }
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = listModifier,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(exams) { exam ->
-                        ExamCard(
-                            exam = exam,
-                            nowMs = nowMs,
-                            onOpenInProgressExam = onOpenInProgressExam,
-                            onOpenFinishedExam = { showFinishedDialog = true }
-                        )
-                    }
+            // Clean LazyColumn (fixes the blue scrollbar bug)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(exams) { exam ->
+                    ExamCard(
+                        exam = exam,
+                        nowMs = nowMs,
+                        onOpenInProgressExam = onOpenInProgressExam,
+                        onOpenFinishedExam = { showFinishedDialog = true },
+                        onDelete = { examToDelete = exam } // Cambiado para abrir diálogo
+                    )
                 }
             }
         }
     }
 
+
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Nuevo examen") },
+            title = { Text("New Exam") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TextField(
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
                         value = newTitle,
                         onValueChange = { newTitle = it },
                         singleLine = true,
-                        label = { Text("Nombre del examen") }
+                        label = { Text("Exam Title") },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val dateText = selectedEndsAtMs?.let { formatDateTime(it) } ?: "Sin fecha/hora"
-                        Text("Finaliza: $dateText", modifier = Modifier.weight(1f))
+                        val dateText = selectedEndsAtMs?.let { formatDateTime(it) } ?: "Not set"
+                        Text(
+                            text = "Ends at: $dateText",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
-                        OutlinedButton(
+                        TextButton(
                             onClick = {
-                                // 1) Elegir FECHA
                                 val now = Calendar.getInstance()
                                 DatePickerDialog(
                                     context,
                                     { _, year, month, day ->
-                                        // 2) Después de elegir fecha, elegimos HORA
-                                        val defaultHour = now.get(Calendar.HOUR_OF_DAY)
-                                        val defaultMinute = now.get(Calendar.MINUTE)
-
                                         TimePickerDialog(
                                             context,
-                                            { _, hourOfDay, minute ->
+                                            { _, hour, minute ->
                                                 val cal = Calendar.getInstance().apply {
-                                                    set(Calendar.YEAR, year)
-                                                    set(Calendar.MONTH, month)
-                                                    set(Calendar.DAY_OF_MONTH, day)
-                                                    set(Calendar.HOUR_OF_DAY, hourOfDay)
-                                                    set(Calendar.MINUTE, minute)
-                                                    set(Calendar.SECOND, 0)
+                                                    set(year, month, day, hour, minute, 0)
                                                     set(Calendar.MILLISECOND, 0)
                                                 }
                                                 selectedEndsAtMs = cal.timeInMillis
                                             },
-                                            defaultHour,
-                                            defaultMinute,
-                                            true // 24h
+                                            now.get(Calendar.HOUR_OF_DAY),
+                                            now.get(Calendar.MINUTE),
+                                            true
                                         ).show()
                                     },
                                     now.get(Calendar.YEAR),
@@ -165,7 +159,7 @@ fun ExamsScreen(
                                     now.get(Calendar.DAY_OF_MONTH)
                                 ).show()
                             }
-                        ) { Text("Elegir") }
+                        ) { Text("Set Date") }
                     }
                 }
             },
@@ -174,25 +168,51 @@ fun ExamsScreen(
                     onClick = {
                         val ends = selectedEndsAtMs ?: return@Button
                         onAddExam(newTitle, ends)
-                        newTitle = ""
-                        selectedEndsAtMs = null
                         showCreateDialog = false
                     },
                     enabled = newTitle.trim().isNotEmpty() && selectedEndsAtMs != null
-                ) { Text("Guardar") }
+                ) { Text("Save") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showCreateDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") }
             }
         )
     }
 
+    // Finished Exam Alert
     if (showFinishedDialog) {
         AlertDialog(
             onDismissRequest = { showFinishedDialog = false },
-            title = { Text("Examen terminado") },
-            text = { Text("Este examen ya pasó. Solo se puede abrir el cronómetro si está “En proceso”.") },
-            confirmButton = { Button(onClick = { showFinishedDialog = false }) { Text("OK") } }
+            title = { Text("Exam Finished") },
+            text = { Text("This exam has already passed. The stopwatch is only available for active exams.") },
+            confirmButton = {
+                Button(onClick = { showFinishedDialog = false }) { Text("Got it") }
+            }
+        )
+    }
+
+    // Confirmation dialog for deleting an exam
+    examToDelete?.let { exam ->
+        AlertDialog(
+            onDismissRequest = { examToDelete = null },
+            title = { Text("Delete Exam") },
+            text = { Text("Are you sure you want to delete '${exam.title}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteExam(exam.id)
+                        examToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { examToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -202,11 +222,12 @@ private fun ExamCard(
     exam: Exam,
     nowMs: Long,
     onOpenInProgressExam: (Exam) -> Unit,
-    onOpenFinishedExam: () -> Unit
+    onOpenFinishedExam: () -> Unit,
+    onDelete: () -> Unit //to delete exam
 ) {
     val inProgress = nowMs < exam.endsAtEpochMs
 
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
@@ -216,41 +237,62 @@ private fun ExamCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(exam.title, style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Finaliza: ${formatDateTime(exam.endsAtEpochMs)}",
-                    style = MaterialTheme.typography.bodySmall
+                    text = exam.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Deadline: ${formatDateTime(exam.endsAtEpochMs)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            StatusPill(
-                text = if (inProgress) "En proceso" else "Terminado",
-                isPositive = inProgress
-            )
+
+            // Fila para el status pill y el botón de borrar
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusPill(
+                    text = if (inProgress) "In Progress" else "Finished",
+                    isPositive = inProgress
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Exam",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }
+
+
 @Composable
 private fun StatusPill(text: String, isPositive: Boolean) {
-    val bg = if (isPositive) MaterialTheme.colorScheme.secondaryContainer
+    val bg = if (isPositive) MaterialTheme.colorScheme.primaryContainer
     else MaterialTheme.colorScheme.surfaceVariant
 
-    val fg = if (isPositive) MaterialTheme.colorScheme.onSecondaryContainer
+    val fg = if (isPositive) MaterialTheme.colorScheme.onPrimaryContainer
     else MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
         color = bg,
         contentColor = fg,
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.medium
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
         )
     }
 }

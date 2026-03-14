@@ -13,7 +13,7 @@ class FirestoreRepository {
     // ── SUBJECTS ──────────────────────────────────────────
 
     suspend fun addSubject(subject: Subject): Result<Unit> = runCatching {
-        // If subject.id is empty, Firestore will generate one. 
+        // If subject.id is empty, Firestore will generate one.
         // If it has one (e.g. from @DocumentId), it will use it.
         if (subject.id.isEmpty()) {
             val docRef = db.collection("subjects").document()
@@ -34,8 +34,8 @@ class FirestoreRepository {
             .toObjects(Subject::class.java)
     }
 
-
     suspend fun deleteSubject(subjectId: String): Result<Unit> = runCatching {
+        val batch = db.batch()
 
         // 1. Find exams belonging to the subject
         val examsSnapshot = db.collection("exams")
@@ -43,18 +43,23 @@ class FirestoreRepository {
             .get()
             .await()
 
-        // 2. Delete exams
-        val batch = db.batch()
+        // 2. Add them to the delete batch
         examsSnapshot.documents.forEach { doc ->
             batch.delete(doc.reference)
         }
 
-        // 3. Delete subject
         val subjectRef = db.collection("subjects").document(subjectId)
         batch.delete(subjectRef)
 
-        // 4. Commit batch
         batch.commit().await()
+    }
+    //LEAVE, for the non owner users of a subject
+    suspend fun leaveSubject(subjectId: String, userId: String): Result<Unit> = runCatching {
+        // Usamos FieldValue.arrayRemove para quitar el ID del usuario de la lista de miembros
+        db.collection("subjects").document(subjectId)
+            .update("members", com.google.firebase.firestore.FieldValue.arrayRemove(userId))
+            .await()
+        Unit
     }
 
     // ── EXAMS ─────────────────────────────────────────────
@@ -89,8 +94,10 @@ class FirestoreRepository {
 
     // ── REAL-TIME LISTENERS ───────────────────────────────
 
-    fun listenToSubjects(onChange: (List<Subject>) -> Unit): ListenerRegistration {
+    // Cambia la función de escuchar asignaturas
+    fun listenToSubjects(userId: String, onChange: (List<Subject>) -> Unit): ListenerRegistration {
         return db.collection("subjects")
+            .whereEqualTo("ownerId", userId) //Only the owner
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
                 onChange(snapshot.toObjects(Subject::class.java))
@@ -99,12 +106,17 @@ class FirestoreRepository {
 
     fun listenToExams(subjectId: String, onChange: (List<Exam>) -> Unit): ListenerRegistration {
         return db.collection("exams")
-            .whereEqualTo("subjectId", subjectId)
+            .whereEqualTo("subjectId", subjectId) //ESTO es lo que filtra por asignatura
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
                 onChange(snapshot.toObjects(Exam::class.java))
             }
     }
+
+    suspend fun createUserProfile(user: UserProfile) = runCatching {
+        db.collection("users").document(user.uid).set(user).await()
+    }  //for storing when creating user
+
 }
 
 
