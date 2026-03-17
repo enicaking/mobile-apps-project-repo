@@ -146,7 +146,7 @@ class MainViewModel : ViewModel() {
         val currentUserId = authRepo.currentUser?.uid ?: return@launch
 
         if (subject.ownerId == currentUserId) {
-            // Si soy el dueño, borro todo (lo que ya tenías)
+            // Si soy el dueño, borrotodo (lo que ya tenías)
             repo.deleteSubject(subject.id).onFailure { _error.value = it.message }
         } else {
             // Si no soy el dueño, solo me salgo

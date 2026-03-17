@@ -138,7 +138,7 @@ fun StopwatchScreen(
         ) {
             if (showTitle) {
                 Text(
-                    text = "Cronómetro",
+                    text = "Stopwatch",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -155,7 +155,7 @@ fun StopwatchScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Tiempo",
+                        text = "Time",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -190,7 +190,7 @@ fun StopwatchScreen(
                         startElapsedMs = SystemClock.elapsedRealtime()
                     },
                     enabled = !isRunning
-                ) { Text(if (displayMs > 0L) "Reanudar" else "Start") }
+                ) { Text(if (displayMs > 0L) "Continue" else "Start") }
 
                 FilledTonalButton(
                     modifier = Modifier.weight(1f).height(52.dp),
@@ -223,7 +223,7 @@ fun StopwatchScreen(
 
             // Quick actions (above History)
             Text(
-                text = "Acciones rápidas",
+                text = "Quick actions",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -277,13 +277,13 @@ fun StopwatchScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Historial",
+                    text = "History",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { sessions.clear() }, enabled = sessions.isNotEmpty()) {
-                    Text("Borrar")
+                    Text("Delete")
                 }
             }
 
@@ -294,8 +294,8 @@ fun StopwatchScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("Aún no hay registros", fontWeight = FontWeight.SemiBold)
-                        Text("Pulsa Finish para guardar el tiempo y la fecha.")
+                        Text("No records yet", fontWeight = FontWeight.SemiBold)
+                        Text("Press Finish to save time and date.")
                     }
                 }
             } else {

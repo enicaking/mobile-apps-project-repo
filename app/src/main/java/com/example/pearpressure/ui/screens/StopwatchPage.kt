@@ -46,7 +46,7 @@ fun StopwatchPage(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onBack) { Text("← Volver") }
+                    TextButton(onClick = onBack) { Text("← Go back") }
                     Spacer(Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -78,15 +78,15 @@ fun StopwatchPage(
 }
 
 private fun formatCountdownDaysHours(diffMs: Long): String {
-    if (diffMs <= 0L) return "El examen ya ha finalizado."
+    if (diffMs <= 0L) return "The examen has finished."
 
     val totalHours = diffMs / (1000L * 60 * 60)
     val days = totalHours / 24
     val hours = totalHours % 24
 
     return when {
-        days > 0 && hours > 0 -> "Quedan $days día(s) y $hours hora(s) para el examen."
-        days > 0 -> "Quedan $days día(s) para el examen."
-        else -> "Quedan $hours hora(s) para el examen."
+        days > 0 && hours > 0 -> " $days days and $hours hours for the exam."
+        days > 0 -> " $days days until the exam."
+        else -> "$hours hours until the exam."
     }
 }

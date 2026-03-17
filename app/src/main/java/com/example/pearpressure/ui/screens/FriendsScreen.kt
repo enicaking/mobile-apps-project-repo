@@ -14,6 +14,6 @@ fun FriendsScreen() {
         modifier = Modifier.fillMaxSize().padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("Amigos (vacío por ahora)", style = MaterialTheme.typography.titleLarge)
+        Text("Friends (empty for now)", style = MaterialTheme.typography.titleLarge)
     }
 }

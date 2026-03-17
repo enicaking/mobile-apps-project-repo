@@ -105,7 +105,7 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     selectedExamId = exam.id
                     screen = HomeScreen.STOPWATCH
                 },
-                onDeleteExam = { examId -> //to deete exam
+                onDeleteExam = { examId -> //to delete exam
                     viewModel.deleteExam(examId)
                 },
                 onBack = { screen = HomeScreen.SUBJECTS }

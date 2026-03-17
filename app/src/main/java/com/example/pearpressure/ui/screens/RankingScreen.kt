@@ -90,7 +90,7 @@ fun RankingScreen() {
                 onClick = { /* TODO: later */ },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Acción (próximamente)")
+                Text(".....")
             }
 
             if (entries.isEmpty()) {
@@ -153,9 +153,9 @@ private fun RankingRow(rank: Int, entry: RankingEntry) {
 private fun EmptyRankingState() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text("Aún no hay ranking", fontWeight = FontWeight.SemiBold)
+            Text("There are no rankings yet", fontWeight = FontWeight.SemiBold)
             Text(
-                "Cuando tengamos datos (amigos, puntos, horas, etc.) aparecerán aquí.",
+                "When we have data/statistics (friends, grades...)they will appear here.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

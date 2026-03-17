@@ -17,10 +17,10 @@ data class TabItem(
     val icon: ImageVector
 )
 
-// ✅ EDITA AQUÍ los iconos y nombres cuando quieras
+// EDIT HERE ICONOS Y NOMBRES CUANDO QUERAMOS
 val MainTabs = listOf(
     TabItem(MainTab.HOME, "Inicio", Icons.Filled.Home),
     TabItem(MainTab.RANKING, "Ranking", Icons.Filled.Star),
-    TabItem(MainTab.FRIENDS, "Amigos", Icons.Filled.People),
-    TabItem(MainTab.PROFILE, "Perfil", Icons.Filled.Person),
+    TabItem(MainTab.FRIENDS, "Friends", Icons.Filled.People),
+    TabItem(MainTab.PROFILE, "Profile", Icons.Filled.Person),
 )
