@@ -7,20 +7,20 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 
-// Las pestañas principales de la app
+// Main tabs of the app
 enum class MainTab { HOME, RANKING, FRIENDS, PROFILE }
 
-// Cada item del menú: pestaña + texto + icono (editable)
+// Bottom menu item: tab + label + icon (editable)
 data class TabItem(
     val tab: MainTab,
     val label: String,
     val icon: ImageVector
 )
 
-// EDITAR AQUI ICONOS Y NOMBRES CUANDO QUERAMOS
+// Edit icons and labels here whenever you want
 val MainTabs = listOf(
-    TabItem(MainTab.HOME, "Inicio", Icons.Filled.Home),
+    TabItem(MainTab.HOME, "Home", Icons.Filled.Home),
     TabItem(MainTab.RANKING, "Ranking", Icons.Filled.Star),
-    TabItem(MainTab.FRIENDS, "Amigos", Icons.Filled.People),
-    TabItem(MainTab.PROFILE, "Perfil", Icons.Filled.Person),
+    TabItem(MainTab.FRIENDS, "Friends", Icons.Filled.People),
+    TabItem(MainTab.PROFILE, "Profile", Icons.Filled.Person),
 )
