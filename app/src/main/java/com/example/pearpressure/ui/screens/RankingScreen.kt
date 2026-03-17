@@ -1,97 +1,57 @@
 package com.example.pearpressure.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
-data class RankingEntry(
-    val userName: String,
-    val score: Int // for now: points (we'll define what this means later)
-)
-
-private enum class RankingFilter { WEEK, ALL_TIME }
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pearpressure.MainViewModel
+import com.example.pearpressure.RankingEntryUi
 
 @Composable
 fun RankingScreen() {
-    // ✅ Dummy data for now (later we'll replace it with real ranking data)
-    val sampleEntries = remember {
-        listOf(
-            RankingEntry("Sofía", 120),
-            RankingEntry("Alex", 95),
-            RankingEntry("María", 80),
-            RankingEntry("Diego", 70),
-            RankingEntry("Lucía", 60)
-        )
-    }
+    val vm: MainViewModel = viewModel()
 
-    var filter by remember { mutableStateOf(RankingFilter.WEEK) }
+    val subjects by vm.subjects.collectAsState()
+    val selectedSubjectId by vm.selectedRankingSubjectId.collectAsState()
+    val entries by vm.rankingEntries.collectAsState()
 
-    // Later you can change this to show different lists based on filter
-    val entries = when (filter) {
-        RankingFilter.WEEK -> sampleEntries
-        RankingFilter.ALL_TIME -> sampleEntries // placeholder for now
-    }
+    var showPicker by remember { mutableStateOf(false) }
+
+    val subjectName = subjects.firstOrNull { it.id == selectedSubjectId }?.name ?: "Sin asignatura"
 
     Scaffold { padding ->
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize(),
+            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header (same style as your other screens)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Ranking",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.weight(1f))
-
-                // Simple filter toggle (no experimental components)
-                TextButton(
-                    onClick = { filter = RankingFilter.WEEK },
-                    enabled = filter != RankingFilter.WEEK
-                ) { Text("Semana") }
-
-                TextButton(
-                    onClick = { filter = RankingFilter.ALL_TIME },
-                    enabled = filter != RankingFilter.ALL_TIME
-                ) { Text("Total") }
+                TextButton(onClick = { showPicker = true }, enabled = subjects.isNotEmpty()) {
+                    Text("Asignatura")
+                }
             }
 
-            // Optional action button placeholder (future: invite friends, refresh, etc.)
+            Text(
+                text = "Mostrando: $subjectName",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             OutlinedButton(
-                onClick = { /* TODO: later */ },
+                onClick = { vm.loadRanking() },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(".....")
-            }
+            ) { Text("Recargar") }
 
             if (entries.isEmpty()) {
                 EmptyRankingState()
@@ -102,21 +62,42 @@ fun RankingScreen() {
                 ) {
                     items(entries) { entry ->
                         val rank = entries.indexOf(entry) + 1
-                        RankingRow(rank = rank, entry = entry)
+                        RankingRow(rank, entry)
                     }
                 }
             }
         }
     }
+
+    if (showPicker) {
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text("Elige asignatura") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    subjects.forEach { s ->
+                        OutlinedButton(
+                            onClick = {
+                                vm.selectRankingSubject(s.id)
+                                showPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(s.name) }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Cerrar") }
+            }
+        )
+    }
 }
 
 @Composable
-private fun RankingRow(rank: Int, entry: RankingEntry) {
+private fun RankingRow(rank: Int, entry: RankingEntryUi) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -127,22 +108,17 @@ private fun RankingRow(rank: Int, entry: RankingEntry) {
             )
 
             Column(modifier = Modifier.weight(1f)) {
+                Text(entry.userName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = entry.userName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Puntos: ${entry.score}",
+                    text = "Tiempo total: ${formatMs(entry.totalStudyTimeMs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // You can later replace "score" with hours studied, streak, etc.
             Text(
-                text = entry.score.toString(),
-                style = MaterialTheme.typography.titleLarge,
+                text = formatMs(entry.totalStudyTimeMs),
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -153,12 +129,19 @@ private fun RankingRow(rank: Int, entry: RankingEntry) {
 private fun EmptyRankingState() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text("There are no rankings yet", fontWeight = FontWeight.SemiBold)
+            Text("Aún no hay ranking", fontWeight = FontWeight.SemiBold)
             Text(
-                "When we have data/statistics (friends, grades...)they will appear here.",
+                "Se calcula con users.totalStudyTime de los members/owner de la asignatura.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+}
+
+private fun formatMs(ms: Long): String {
+    val totalMinutes = ms / 60_000
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }

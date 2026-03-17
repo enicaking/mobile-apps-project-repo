@@ -116,7 +116,68 @@ class FirestoreRepository {
     suspend fun createUserProfile(user: UserProfile) = runCatching {
         db.collection("users").document(user.uid).set(user).await()
     }  //for storing when creating user
+    // ── SUBJECTS (owner OR member) ──────────────────────────
+// Devuelve 2 listeners (owned + member). El ViewModel los guardará y los cerrará.
+    fun listenToSubjectsForUser(
+        userId: String,
+        onChange: (List<Subject>) -> Unit
+    ): List<ListenerRegistration> {
 
+        var owned: List<Subject> = emptyList()
+        var member: List<Subject> = emptyList()
+
+        fun emit() {
+            onChange((owned + member).distinctBy { it.id })
+        }
+
+        val l1 = db.collection("subjects")
+            .whereEqualTo("ownerId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                owned = snapshot.toObjects(Subject::class.java)
+                emit()
+            }
+
+        val l2 = db.collection("subjects")
+            .whereArrayContains("members", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                member = snapshot.toObjects(Subject::class.java)
+                emit()
+            }
+
+        return listOf(l1, l2)
+    }
+
+// ── USERS ───────────────────────────────────────────────
+
+    suspend fun getUserProfilesByIds(uids: List<String>): Result<List<UserProfile>> = runCatching {
+        if (uids.isEmpty()) return@runCatching emptyList<UserProfile>()
+
+        // Firestore "whereIn" max 10 -> chunks
+        val chunks = uids.distinct().chunked(10)
+        val result = mutableListOf<UserProfile>()
+
+        for (chunk in chunks) {
+            val snap = db.collection("users")
+                .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
+                .get()
+                .await()
+
+            result += snap.toObjects(UserProfile::class.java)
+        }
+        result
+    }
+
+    suspend fun findUserByEmail(email: String): Result<UserProfile?> = runCatching {
+        val snap = db.collection("users")
+            .whereEqualTo("email", email.trim())
+            .limit(1)
+            .get()
+            .await()
+
+        snap.documents.firstOrNull()?.toObject(UserProfile::class.java)
+    }
 }
 
 
