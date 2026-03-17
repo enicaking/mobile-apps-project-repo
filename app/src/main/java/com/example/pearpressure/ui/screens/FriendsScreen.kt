@@ -24,7 +24,10 @@ fun FriendsScreen() {
 
     Scaffold { padding ->
         Column(
-            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -33,10 +36,11 @@ fun FriendsScreen() {
                 fontWeight = FontWeight.SemiBold
             )
 
+            // Search (by email)
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Buscar por email") },
+                label = { Text("Search by email") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -44,26 +48,41 @@ fun FriendsScreen() {
             Button(
                 onClick = { vm.searchUserByEmail(email) },
                 modifier = Modifier.fillMaxWidth().height(52.dp)
-            ) { Text("Buscar") }
+            ) {
+                Text("Search")
+            }
 
             if (searchError != null) {
-                Text(searchError!!, color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = searchError!!,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             if (searchResult != null) {
-                UserCard(title = "Encontrado", user = searchResult!!)
+                UserCard(
+                    title = "Found user",
+                    user = searchResult!!,
+                    trailing = {
+                        // Template button (later: send friend request / invite to subject)
+                        OutlinedButton(onClick = { /* TODO later */ }) {
+                            Text("Add")
+                        }
+                    }
+                )
             }
 
             Divider()
 
-            Text("Study buddies (por asignaturas)", fontWeight = FontWeight.SemiBold)
+            Text("Study buddies (from shared subjects)", fontWeight = FontWeight.SemiBold)
 
             if (buddies.isEmpty()) {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
-                        Text("Aún no hay buddies", fontWeight = FontWeight.SemiBold)
+                        Text("No buddies yet", fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            "Aparecen cuando compartes asignaturas (owner/members).",
+                            "They appear when you share subjects (owner/members).",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -73,7 +92,9 @@ fun FriendsScreen() {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(buddies) { u -> UserCard(title = null, user = u) }
+                    items(buddies) { u ->
+                        UserCard(title = null, user = u, trailing = null)
+                    }
                 }
             }
         }
@@ -81,23 +102,33 @@ fun FriendsScreen() {
 }
 
 @Composable
-private fun UserCard(title: String?, user: UserProfile) {
+private fun UserCard(
+    title: String?,
+    user: UserProfile,
+    trailing: (@Composable (() -> Unit))?
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
             if (!title.isNullOrBlank()) {
                 Text(title, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
             }
-            Text(
-                text = if (user.name.isNotBlank()) user.name else "Sin nombre",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = user.email,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (user.name.isNotBlank()) user.name else "No name",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = user.email,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (trailing != null) trailing()
+            }
         }
     }
 }

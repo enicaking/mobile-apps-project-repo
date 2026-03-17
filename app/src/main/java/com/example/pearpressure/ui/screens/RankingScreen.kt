@@ -21,37 +21,62 @@ fun RankingScreen() {
     val selectedSubjectId by vm.selectedRankingSubjectId.collectAsState()
     val entries by vm.rankingEntries.collectAsState()
 
-    var showPicker by remember { mutableStateOf(false) }
+    var showSubjectPicker by remember { mutableStateOf(false) }
 
-    val subjectName = subjects.firstOrNull { it.id == selectedSubjectId }?.name ?: "Sin asignatura"
+    val subjectName = subjects.firstOrNull { it.id == selectedSubjectId }?.name ?: "No subject selected"
 
     Scaffold { padding ->
         Column(
-            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "Ranking",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { showPicker = true }, enabled = subjects.isNotEmpty()) {
-                    Text("Asignatura")
+
+                TextButton(
+                    onClick = { showSubjectPicker = true },
+                    enabled = subjects.isNotEmpty()
+                ) {
+                    Text("Subject")
                 }
             }
 
             Text(
-                text = "Mostrando: $subjectName",
+                text = "Showing: $subjectName",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            // Optional filters (template only; connect later to sessions)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(
+                    onClick = { /* TODO later */ },
+                    label = { Text("This week") }
+                )
+                AssistChip(
+                    onClick = { /* TODO later */ },
+                    label = { Text("All time") }
+                )
+            }
+
             OutlinedButton(
                 onClick = { vm.loadRanking() },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Recargar") }
+            ) {
+                Text("Refresh")
+            }
 
             if (entries.isEmpty()) {
                 EmptyRankingState()
@@ -62,32 +87,35 @@ fun RankingScreen() {
                 ) {
                     items(entries) { entry ->
                         val rank = entries.indexOf(entry) + 1
-                        RankingRow(rank, entry)
+                        RankingRow(rank = rank, entry = entry)
                     }
                 }
             }
         }
     }
 
-    if (showPicker) {
+    // Subject picker dialog
+    if (showSubjectPicker) {
         AlertDialog(
-            onDismissRequest = { showPicker = false },
-            title = { Text("Elige asignatura") },
+            onDismissRequest = { showSubjectPicker = false },
+            title = { Text("Choose a subject") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     subjects.forEach { s ->
                         OutlinedButton(
                             onClick = {
                                 vm.selectRankingSubject(s.id)
-                                showPicker = false
+                                showSubjectPicker = false
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(s.name) }
+                        ) {
+                            Text(s.name)
+                        }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPicker = false }) { Text("Cerrar") }
+                TextButton(onClick = { showSubjectPicker = false }) { Text("Close") }
             }
         )
     }
@@ -97,7 +125,9 @@ fun RankingScreen() {
 private fun RankingRow(rank: Int, entry: RankingEntryUi) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -108,9 +138,13 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi) {
             )
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(entry.userName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "Tiempo total: ${formatMs(entry.totalStudyTimeMs)}",
+                    text = entry.userName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Total study time: ${formatMs(entry.totalStudyTimeMs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -129,9 +163,10 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi) {
 private fun EmptyRankingState() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text("Aún no hay ranking", fontWeight = FontWeight.SemiBold)
+            Text("No ranking yet", fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(4.dp))
             Text(
-                "Se calcula con users.totalStudyTime de los members/owner de la asignatura.",
+                "Ranking is based on users.totalStudyTime for the subject owner + members.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
