@@ -7,7 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import com.example.pearpressure.ui.SofiaTestApp
+import com.example.pearpressure.ui.TestApp
 import com.example.pearpressure.ui.theme.SofiaTestTheme
 import kotlinx.coroutines.launch
 
@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SofiaTestTheme {
-                SofiaTestApp(viewModel = viewModel)
+                TestApp(viewModel = viewModel)
             }
         }
     }

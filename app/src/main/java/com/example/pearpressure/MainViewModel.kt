@@ -132,6 +132,8 @@ class MainViewModel : ViewModel() {
             _exams.value = updatedList
         }
     }
+    //quita el listener anterior
+    //empieza a escuchar los exámenes de esa asignatura
 
     fun addSubject(name: String) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
@@ -157,8 +159,9 @@ class MainViewModel : ViewModel() {
     }
 
     fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
-
+    //Esto se usa para mostrar el nombre de la asignatura arriba del crono.
     fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
+    //Sirve para recuperar el examen elegido cuando vas a abrir el cronómetro.
 
     fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
         val currentUserId = authRepo.currentUser?.uid ?: return@launch
