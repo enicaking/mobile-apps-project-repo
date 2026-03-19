@@ -14,7 +14,7 @@ import com.example.pearpressure.ui.screens.*
 private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
 @Composable
-fun SofiaTestApp(viewModel: MainViewModel = viewModel()) {
+fun TestApp(viewModel: MainViewModel = viewModel()) {
     // 1. New state to track if we are logged in
     var isLoggedIn by remember { mutableStateOf(viewModel.isUserLoggedIn()) }
 
