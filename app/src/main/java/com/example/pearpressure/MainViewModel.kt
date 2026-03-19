@@ -2,10 +2,7 @@ package com.example.pearpressure
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.pearpressure.data.Exam
-import com.example.pearpressure.data.FirestoreRepository
-import com.example.pearpressure.data.Subject
-import com.example.pearpressure.data.UserProfile
+import com.example.pearpressure.data.*
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,9 +14,20 @@ data class RankingEntryUi(
     val totalStudyTimeMs: Long
 )
 
+data class IncomingFriendRequestUi(
+    val request: FriendRequest,
+    val from: UserProfile
+)
+
+data class OutgoingFriendRequestUi(
+    val request: FriendRequest,
+    val to: UserProfile
+)
+
 class MainViewModel : ViewModel() {
 
     private val repo = FirestoreRepository()
+    private val authRepo = AuthRepository()
 
     private val _subjects = MutableStateFlow<List<Subject>>(emptyList())
     val subjects: StateFlow<List<Subject>> = _subjects
@@ -30,17 +38,28 @@ class MainViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // ✅ Ranking state
+    // ── Ranking
     private val _selectedRankingSubjectId = MutableStateFlow<String?>(null)
     val selectedRankingSubjectId: StateFlow<String?> = _selectedRankingSubjectId
 
     private val _rankingEntries = MutableStateFlow<List<RankingEntryUi>>(emptyList())
     val rankingEntries: StateFlow<List<RankingEntryUi>> = _rankingEntries
 
-    // ✅ Friends state
+    // ── Friends (real friends)
     private val _friends = MutableStateFlow<List<UserProfile>>(emptyList())
     val friends: StateFlow<List<UserProfile>> = _friends
 
+    private val _incomingRequests = MutableStateFlow<List<IncomingFriendRequestUi>>(emptyList())
+    val incomingRequests: StateFlow<List<IncomingFriendRequestUi>> = _incomingRequests
+
+    private val _outgoingRequests = MutableStateFlow<List<OutgoingFriendRequestUi>>(emptyList())
+    val outgoingRequests: StateFlow<List<OutgoingFriendRequestUi>> = _outgoingRequests
+
+    // ── Study buddies (derived from subjects members/owner)
+    private val _studyBuddies = MutableStateFlow<List<UserProfile>>(emptyList())
+    val studyBuddies: StateFlow<List<UserProfile>> = _studyBuddies
+
+    // ── Search
     private val _friendSearchResult = MutableStateFlow<UserProfile?>(null)
     val friendSearchResult: StateFlow<UserProfile?> = _friendSearchResult
 
@@ -51,37 +70,88 @@ class MainViewModel : ViewModel() {
     private var subjectsListeners: List<ListenerRegistration> = emptyList()
     private var examsListener: ListenerRegistration? = null
 
-    // authentication logic
-    private val authRepo = com.example.pearpressure.data.AuthRepository()
+    private var friendsListener: ListenerRegistration? = null
+    private var incomingReqListener: ListenerRegistration? = null
+    private var outgoingReqListener: ListenerRegistration? = null
 
     init {
-        authRepo.currentUser?.uid?.let { userId ->
-            startListening(userId)
-        }
+        authRepo.currentUser?.uid?.let { startListening(it) }
     }
 
-    fun getCurrentUserId(): String = authRepo.currentUser?.uid ?: ""
-
-    fun getCurrentUserEmail(): String = authRepo.currentUser?.email ?: "No email found"
-
     fun isUserLoggedIn(): Boolean = authRepo.currentUser != null
+    fun getCurrentUserId(): String = authRepo.currentUser?.uid ?: ""
+    fun getCurrentUserEmail(): String = authRepo.currentUser?.email ?: "No email"
 
     private fun startListening(userId: String) {
         // stop old listeners
         subjectsListeners.forEach { it.remove() }
+        friendsListener?.remove()
+        incomingReqListener?.remove()
+        outgoingReqListener?.remove()
+
+        // subjects (owner + member)
         subjectsListeners = repo.listenToSubjectsForUser(userId) { updatedList ->
             _subjects.value = updatedList
 
-            // Default ranking subject if none selected yet
             if (_selectedRankingSubjectId.value == null && updatedList.isNotEmpty()) {
                 _selectedRankingSubjectId.value = updatedList.first().id
             }
 
-            // Keep friends + ranking updated when subjects change
-            refreshFriendsFromSubjects()
+            // derived lists
+            refreshStudyBuddiesFromSubjects()
             loadRanking()
         }
+
+        // friends + requests
+        startFriendsListeners(userId)
     }
+
+    private fun startFriendsListeners(userId: String) {
+        friendsListener?.remove()
+        friendsListener = repo.listenFriends(userId) { friendUids ->
+            viewModelScope.launch {
+                repo.getUserProfilesByIds(friendUids)
+                    .onSuccess { _friends.value = it }
+                    .onFailure { _error.value = it.message }
+            }
+        }
+
+        incomingReqListener?.remove()
+        incomingReqListener = repo.listenIncomingFriendRequests(userId) { requests ->
+            viewModelScope.launch {
+                val fromUids = requests.map { it.fromUid }.distinct()
+                repo.getUserProfilesByIds(fromUids)
+                    .onSuccess { profiles ->
+                        val map = profiles.associateBy { it.uid }
+                        _incomingRequests.value = requests
+                            .mapNotNull { r ->
+                                val from = map[r.fromUid] ?: return@mapNotNull null
+                                IncomingFriendRequestUi(r, from)
+                            }
+                    }
+                    .onFailure { _error.value = it.message }
+            }
+        }
+
+        outgoingReqListener?.remove()
+        outgoingReqListener = repo.listenOutgoingFriendRequests(userId) { requests ->
+            viewModelScope.launch {
+                val toUids = requests.map { it.toUid }.distinct()
+                repo.getUserProfilesByIds(toUids)
+                    .onSuccess { profiles ->
+                        val map = profiles.associateBy { it.uid }
+                        _outgoingRequests.value = requests
+                            .mapNotNull { r ->
+                                val to = map[r.toUid] ?: return@mapNotNull null
+                                OutgoingFriendRequestUi(r, to)
+                            }
+                    }
+                    .onFailure { _error.value = it.message }
+            }
+        }
+    }
+
+    // ── Auth
 
     fun signIn(email: String, pass: String, onSuccess: () -> Unit) = viewModelScope.launch {
         authRepo.signIn(email, pass)
@@ -112,13 +182,21 @@ class MainViewModel : ViewModel() {
 
     fun signOut(onSuccess: () -> Unit) {
         authRepo.signOut()
+
         subjectsListeners.forEach { it.remove() }
         examsListener?.remove()
+        friendsListener?.remove()
+        incomingReqListener?.remove()
+        outgoingReqListener?.remove()
 
         _subjects.value = emptyList()
         _exams.value = emptyList()
         _rankingEntries.value = emptyList()
         _friends.value = emptyList()
+        _incomingRequests.value = emptyList()
+        _outgoingRequests.value = emptyList()
+        _studyBuddies.value = emptyList()
+
         _selectedRankingSubjectId.value = null
         _friendSearchResult.value = null
         _friendSearchError.value = null
@@ -126,22 +204,20 @@ class MainViewModel : ViewModel() {
         onSuccess()
     }
 
+    // ── Exams/Subjects
+
     fun loadExams(subjectId: String) {
         examsListener?.remove()
-        examsListener = repo.listenToExams(subjectId) { updatedList ->
-            _exams.value = updatedList
-        }
+        examsListener = repo.listenToExams(subjectId) { _exams.value = it }
     }
-    //quita el listener anterior
-    //empieza a escuchar los exámenes de esa asignatura
 
     fun addSubject(name: String) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
         val cleaned = name.trim()
         if (cleaned.isEmpty()) return@launch
 
-        val subject = Subject(name = cleaned, ownerId = userId)
-        repo.addSubject(subject).onFailure { _error.value = it.message }
+        repo.addSubject(Subject(name = cleaned, ownerId = userId))
+            .onFailure { _error.value = it.message }
     }
 
     fun addExam(subjectId: String, title: String, endsAtMs: Long) = viewModelScope.launch {
@@ -149,23 +225,18 @@ class MainViewModel : ViewModel() {
         val cleaned = title.trim()
         if (cleaned.isEmpty()) return@launch
 
-        val exam = Exam(
-            subjectId = subjectId,
-            ownerId = userId,
-            title = cleaned,
-            endsAtEpochMs = endsAtMs
-        )
-        repo.addExam(exam).onFailure { _error.value = it.message }
+        repo.addExam(
+            Exam(
+                subjectId = subjectId,
+                ownerId = userId,
+                title = cleaned,
+                endsAtEpochMs = endsAtMs
+            )
+        ).onFailure { _error.value = it.message }
     }
-
-    fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
-    //Esto se usa para mostrar el nombre de la asignatura arriba del crono.
-    fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
-    //Sirve para recuperar el examen elegido cuando vas a abrir el cronómetro.
 
     fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
         val currentUserId = authRepo.currentUser?.uid ?: return@launch
-
         if (subject.ownerId == currentUserId) {
             repo.deleteSubject(subject.id).onFailure { _error.value = it.message }
         } else {
@@ -177,7 +248,7 @@ class MainViewModel : ViewModel() {
         repo.deleteExam(examId).onFailure { _error.value = it.message }
     }
 
-    // ── RANKING ───────────────────────────────────────────
+    // ── Ranking
 
     fun selectRankingSubject(subjectId: String) {
         _selectedRankingSubjectId.value = subjectId
@@ -186,13 +257,11 @@ class MainViewModel : ViewModel() {
 
     fun loadRanking() = viewModelScope.launch {
         val subjectId = _selectedRankingSubjectId.value ?: run {
-            _rankingEntries.value = emptyList()
-            return@launch
+            _rankingEntries.value = emptyList(); return@launch
         }
 
         val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: run {
-            _rankingEntries.value = emptyList()
-            return@launch
+            _rankingEntries.value = emptyList(); return@launch
         }
 
         val memberUids = (listOf(subject.ownerId) + subject.members)
@@ -201,25 +270,23 @@ class MainViewModel : ViewModel() {
 
         repo.getUserProfilesByIds(memberUids)
             .onSuccess { profiles ->
-                val entries = profiles
+                _rankingEntries.value = profiles
                     .map {
-                        val name = when {
+                        val display = when {
                             it.name.isNotBlank() -> it.name
                             it.email.isNotBlank() -> it.email
                             else -> it.uid
                         }
-                        RankingEntryUi(it.uid, name, it.totalStudyTime)
+                        RankingEntryUi(it.uid, display, it.totalStudyTime)
                     }
                     .sortedByDescending { it.totalStudyTimeMs }
-
-                _rankingEntries.value = entries
             }
             .onFailure { _error.value = it.message }
     }
 
-    // ── FRIENDS (study buddies via shared subjects) ───────
+    // ── Study buddies (from subjects)
 
-    private fun refreshFriendsFromSubjects() = viewModelScope.launch {
+    private fun refreshStudyBuddiesFromSubjects() = viewModelScope.launch {
         val currentUid = authRepo.currentUser?.uid ?: return@launch
 
         val allUids = _subjects.value
@@ -229,9 +296,11 @@ class MainViewModel : ViewModel() {
             .filter { it != currentUid }
 
         repo.getUserProfilesByIds(allUids)
-            .onSuccess { profiles -> _friends.value = profiles }
+            .onSuccess { _studyBuddies.value = it }
             .onFailure { _error.value = it.message }
     }
+
+    // ── Friends actions
 
     fun searchUserByEmail(email: String) = viewModelScope.launch {
         _friendSearchError.value = null
@@ -242,17 +311,42 @@ class MainViewModel : ViewModel() {
 
         repo.findUserByEmail(cleaned)
             .onSuccess { user ->
-                if (user == null) _friendSearchError.value = "No existe un usuario con ese email"
+                if (user == null) _friendSearchError.value = "No user found with that email."
                 else _friendSearchResult.value = user
             }
             .onFailure { e ->
-                _friendSearchError.value = e.message ?: "Error buscando usuario"
+                _friendSearchError.value = e.message ?: "Error searching user."
             }
     }
 
+    fun sendFriendRequest(toUid: String) = viewModelScope.launch {
+        val fromUid = authRepo.currentUser?.uid ?: return@launch
+        repo.sendFriendRequest(fromUid, toUid)
+            .onFailure { _error.value = it.message }
+    }
+
+    fun acceptRequest(request: FriendRequest) = viewModelScope.launch {
+        repo.acceptFriendRequest(request)
+            .onFailure { _error.value = it.message }
+    }
+
+    fun declineRequest(request: FriendRequest) = viewModelScope.launch {
+        repo.declineFriendRequest(request)
+            .onFailure { _error.value = it.message }
+    }
+
+    fun removeFriend(friendUid: String) = viewModelScope.launch {
+        val myUid = authRepo.currentUser?.uid ?: return@launch
+        repo.removeFriend(myUid, friendUid)
+            .onFailure { _error.value = it.message }
+    }
+
     override fun onCleared() {
-        super.onCleared()
         subjectsListeners.forEach { it.remove() }
         examsListener?.remove()
+        friendsListener?.remove()
+        incomingReqListener?.remove()
+        outgoingReqListener?.remove()
+        super.onCleared()
     }
 }

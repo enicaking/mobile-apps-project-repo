@@ -178,6 +178,126 @@ class FirestoreRepository {
 
         snap.documents.firstOrNull()?.toObject(UserProfile::class.java)
     }
+
+    // ── FRIENDS / REQUESTS ─────────────────────────────────────────────
+
+    fun listenFriends(friendOwnerUid: String, onChange: (List<String>) -> Unit): ListenerRegistration {
+        return db.collection("users")
+            .document(friendOwnerUid)
+            .collection("friends")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val friendUids = snapshot.documents.map { it.id }.distinct()
+                onChange(friendUids)
+            }
+    }
+
+    fun listenIncomingFriendRequests(
+        myUid: String,
+        onChange: (List<FriendRequest>) -> Unit
+    ): ListenerRegistration {
+        return db.collection("friend_requests")
+            .whereEqualTo("toUid", myUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val all = snapshot.toObjects(FriendRequest::class.java)
+                onChange(all.filter { it.status == "pending" })
+            }
+    }
+
+    fun listenOutgoingFriendRequests(
+        myUid: String,
+        onChange: (List<FriendRequest>) -> Unit
+    ): ListenerRegistration {
+        return db.collection("friend_requests")
+            .whereEqualTo("fromUid", myUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val all = snapshot.toObjects(FriendRequest::class.java)
+                onChange(all.filter { it.status == "pending" })
+            }
+    }
+
+    suspend fun sendFriendRequest(fromUid: String, toUid: String): Result<Unit> = runCatching {
+        require(fromUid.isNotBlank() && toUid.isNotBlank()) { "Missing uid" }
+        require(fromUid != toUid) { "You cannot add yourself" }
+
+        // If already friends -> do nothing
+        val already = db.collection("users").document(fromUid)
+            .collection("friends").document(toUid)
+            .get().await()
+            .exists()
+
+        check(!already) { "You are already friends" }
+
+        val requestId = "${fromUid}_${toUid}"
+
+        val req = FriendRequest(
+            id = requestId,
+            fromUid = fromUid,
+            toUid = toUid,
+            status = "pending",
+            createdAtEpochMs = System.currentTimeMillis()
+        )
+
+        db.collection("friend_requests")
+            .document(requestId)
+            .set(req)
+            .await()
+    }
+
+    suspend fun acceptFriendRequest(request: FriendRequest): Result<Unit> = runCatching {
+        val fromUid = request.fromUid
+        val toUid = request.toUid
+        require(fromUid.isNotBlank() && toUid.isNotBlank()) { "Missing uid" }
+
+        val now = System.currentTimeMillis()
+        val batch = db.batch()
+
+        // Create both friend links
+        val aRef = db.collection("users").document(fromUid)
+            .collection("friends").document(toUid)
+        val bRef = db.collection("users").document(toUid)
+            .collection("friends").document(fromUid)
+
+        batch.set(aRef, mapOf("createdAtEpochMs" to now))
+        batch.set(bRef, mapOf("createdAtEpochMs" to now))
+
+        // Delete request (and also delete the reverse request if it exists)
+        val reqId = if (request.id.isNotBlank()) request.id else "${fromUid}_${toUid}"
+        val reqRef = db.collection("friend_requests").document(reqId)
+        val reverseRef = db.collection("friend_requests").document("${toUid}_${fromUid}")
+
+        batch.delete(reqRef)
+        batch.delete(reverseRef)
+
+        batch.commit().await()
+    }
+
+    suspend fun declineFriendRequest(request: FriendRequest): Result<Unit> = runCatching {
+        val fromUid = request.fromUid
+        val toUid = request.toUid
+        val reqId = if (request.id.isNotBlank()) request.id else "${fromUid}_${toUid}"
+
+        db.collection("friend_requests")
+            .document(reqId)
+            .delete()
+            .await()
+    }
+
+    suspend fun removeFriend(myUid: String, friendUid: String): Result<Unit> = runCatching {
+        val batch = db.batch()
+
+        val aRef = db.collection("users").document(myUid)
+            .collection("friends").document(friendUid)
+        val bRef = db.collection("users").document(friendUid)
+            .collection("friends").document(myUid)
+
+        batch.delete(aRef)
+        batch.delete(bRef)
+
+        batch.commit().await()
+    }
 }
 
 
