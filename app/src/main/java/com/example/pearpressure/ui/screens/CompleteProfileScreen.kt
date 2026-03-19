@@ -1,7 +1,5 @@
 package com.example.pearpressure.ui.screens
 
-package com.example.pearpressure.ui.screens
-
 import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
@@ -28,18 +25,13 @@ fun CompleteProfileScreen(
     var selectedSex by remember { mutableStateOf("") }
     var birthdayEpochMs by remember { mutableStateOf(0L) }
 
-    var expandedSex by remember { mutableStateOf(false) }
-
     val error by viewModel.error.collectAsState()
-
-    val calendar = remember { Calendar.getInstance() }
-
     val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
 
     fun formattedBirthday(): String {
         if (birthdayEpochMs <= 0L) return ""
-        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        return formatter.format(Date(birthdayEpochMs))
+        return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(birthdayEpochMs))
     }
 
     val sexOptions = listOf("Male", "Female", "Other", "Prefer not to say")
@@ -61,7 +53,7 @@ fun CompleteProfileScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Fill in your personal information before entering the app.",
+            text = "Enter your information before using the app.",
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -79,44 +71,37 @@ fun CompleteProfileScreen(
         OutlinedTextField(
             value = username,
             onValueChange = {
-                username = it
-                    .replace(" ", "")
-                    .lowercase()
+                username = it.replace(" ", "").lowercase()
             },
             label = { Text("Username") },
             supportingText = { Text("Must be unique") },
-            keyboardOptions = KeyboardOptions.Default,
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(12.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expandedSex,
-            onExpandedChange = { expandedSex = !expandedSex }
-        ) {
-            OutlinedTextField(
-                value = selectedSex,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Sex") },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-            )
+        Text(
+            text = "Sex",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.fillMaxWidth()
+        )
 
-            ExposedDropdownMenu(
-                expanded = expandedSex,
-                onDismissRequest = { expandedSex = false }
-            ) {
-                sexOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            selectedSex = option
-                            expandedSex = false
-                        }
+        Spacer(Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            sexOptions.forEach { option ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedSex == option,
+                        onClick = { selectedSex = option }
                     )
+                    Text(text = option)
                 }
             }
         }
@@ -183,7 +168,5 @@ fun CompleteProfileScreen(
         ) {
             Text("Save profile")
         }
-
-        Spacer(Modifier.height(24.dp))
     }
 }

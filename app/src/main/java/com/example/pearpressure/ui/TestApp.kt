@@ -19,6 +19,8 @@ private enum class AuthScreen {
     APP
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun TestApp(viewModel: MainViewModel = viewModel()) {
     var authScreen by remember {

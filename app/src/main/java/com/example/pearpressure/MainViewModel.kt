@@ -276,7 +276,7 @@ class MainViewModel : ViewModel() {
                 _rankingEntries.value = profiles
                     .map {
                         val display = when {
-                            it.name.isNotBlank() -> it.name
+                            it.fullName.isNotBlank() -> it.fullName
                             it.email.isNotBlank() -> it.email
                             else -> it.uid
                         }

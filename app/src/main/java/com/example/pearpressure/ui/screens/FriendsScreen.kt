@@ -159,7 +159,7 @@ private fun RequestCardIncoming(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("From:", fontWeight = FontWeight.SemiBold)
-            Text(item.from.name.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(item.from.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(item.from.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -175,7 +175,7 @@ private fun RequestCardOutgoing(item: OutgoingFriendRequestUi) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Pending to:", fontWeight = FontWeight.SemiBold)
-            Text(item.to.name.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(item.to.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(item.to.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -197,7 +197,7 @@ private fun UserCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = user.name.ifBlank { "No name" },
+                        text = user.fullName.ifBlank { "No name" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
