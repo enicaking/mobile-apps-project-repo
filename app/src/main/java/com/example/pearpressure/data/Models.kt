@@ -20,9 +20,12 @@ data class Exam(
 
 data class UserProfile(
     val uid: String = "",
-    val name: String = "",
+    val fullName: String = "",
+    val username: String = "",
+    val sex: String = "",
+    val birthdayEpochMs: Long = 0L,
     val email: String = "",
-    val totalStudyTime: Long = 0L // Esto nos servirá para el Ranking más adelante
+    val totalStudyTime: Long = 0L
 )
 
 data class FriendRequest(
@@ -37,3 +40,5 @@ data class FriendLink(
     @DocumentId val uid: String = "",  // docId = friendUid
     var createdAtEpochMs: Long = 0L
 )
+
+

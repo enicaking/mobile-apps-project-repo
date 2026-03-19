@@ -13,52 +13,70 @@ import com.example.pearpressure.ui.screens.*
 
 private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
+private enum class AuthScreen {
+    LOGIN,
+    COMPLETE_PROFILE,
+    APP
+}
+
 @Composable
 fun TestApp(viewModel: MainViewModel = viewModel()) {
-    // 1. New state to track if we are logged in
-    var isLoggedIn by remember { mutableStateOf(viewModel.isUserLoggedIn()) }
-
-    // 2. Logic: If NOT logged in, show LoginScreen. If logged in, show the app.
-    if (!isLoggedIn) {
-        LoginScreen(
-            onLoginSuccess = { isLoggedIn = true },
-            viewModel = viewModel
+    var authScreen by remember {
+        mutableStateOf(
+            if (viewModel.isUserLoggedIn()) AuthScreen.APP else AuthScreen.LOGIN
         )
-    } else {
-        //showing the app when logged in:
-        var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
+    }
 
-        Scaffold(
-            bottomBar = {
-                NavigationBar {
-                    MainTabs.forEach { item ->
-                        NavigationBarItem(
-                            selected = selectedTab == item.tab,
-                            onClick = { selectedTab = item.tab },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) }
+    when (authScreen) {
+        AuthScreen.LOGIN -> {
+            LoginScreen(
+                onLoginSuccess = { authScreen = AuthScreen.APP },
+                onRegisterNeedsProfile = { authScreen = AuthScreen.COMPLETE_PROFILE },
+                viewModel = viewModel
+            )
+        }
+
+        AuthScreen.COMPLETE_PROFILE -> {
+            CompleteProfileScreen(
+                viewModel = viewModel,
+                onProfileCompleted = { authScreen = AuthScreen.APP }
+            )
+        }
+
+        AuthScreen.APP -> {
+            var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
+
+            Scaffold(
+                bottomBar = {
+                    NavigationBar {
+                        MainTabs.forEach { item ->
+                            NavigationBarItem(
+                                selected = selectedTab == item.tab,
+                                onClick = { selectedTab = item.tab },
+                                icon = { Icon(item.icon, contentDescription = item.label) },
+                                label = { Text(item.label) }
+                            )
+                        }
+                    }
+                }
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    when (selectedTab) {
+                        MainTab.HOME -> HomeFlow(viewModel)
+                        MainTab.RANKING -> RankingScreen()
+                        MainTab.FRIENDS -> FriendsScreen()
+                        MainTab.PROFILE -> ProfileScreen(
+                            viewModel = viewModel,
+                            onLogout = { authScreen = AuthScreen.LOGIN }
                         )
                     }
                 }
             }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                when (selectedTab) {
-                    MainTab.HOME -> HomeFlow(viewModel)
-                    MainTab.RANKING -> RankingScreen()
-                    MainTab.FRIENDS -> FriendsScreen()
-                    MainTab.PROFILE -> ProfileScreen(
-                        viewModel = viewModel,
-                        onLogout = { isLoggedIn = false } // This sends the user back to LoginScreen
-                    )
-                }
-            }
         }
-
     }
 }
 

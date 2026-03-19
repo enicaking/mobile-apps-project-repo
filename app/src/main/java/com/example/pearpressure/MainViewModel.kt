@@ -38,6 +38,9 @@ class MainViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _needsProfileCompletion = MutableStateFlow(false)
+    val needsProfileCompletion: StateFlow<Boolean> = _needsProfileCompletion
+
     // ── Ranking
     private val _selectedRankingSubjectId = MutableStateFlow<String?>(null)
     val selectedRankingSubjectId: StateFlow<String?> = _selectedRankingSubjectId
@@ -162,19 +165,14 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    fun signUp(email: String, pass: String, onSuccess: () -> Unit) = viewModelScope.launch {
+    fun signUp(email: String, pass: String, onProfileStepRequired: () -> Unit) = viewModelScope.launch {
+        _error.value = null
+
         authRepo.signUp(email, pass)
             .onSuccess { user ->
-                user?.let {
-                    val profile = UserProfile(
-                        uid = it.uid,
-                        name = email.substringBefore("@"),
-                        email = email,
-                        totalStudyTime = 0L
-                    )
-                    repo.createUserProfile(profile)
-                    startListening(it.uid)
-                    onSuccess()
+                if (user != null) {
+                    _needsProfileCompletion.value = true
+                    onProfileStepRequired()
                 }
             }
             .onFailure { _error.value = it.message }
@@ -349,4 +347,76 @@ class MainViewModel : ViewModel() {
         outgoingReqListener?.remove()
         super.onCleared()
     }
+
+
+
+    fun completeUserProfile(
+        fullName: String,
+        username: String,
+        sex: String,
+        birthdayEpochMs: Long,
+        onSuccess: () -> Unit
+    ) = viewModelScope.launch {
+        _error.value = null
+
+        val currentUser = authRepo.currentUser
+        if (currentUser == null) {
+            _error.value = "No logged user found"
+            return@launch
+        }
+
+        val cleanFullName = fullName.trim()
+        val cleanUsername = username.trim().lowercase()
+        val cleanSex = sex.trim()
+
+        if (cleanFullName.isEmpty()) {
+            _error.value = "Full name is required"
+            return@launch
+        }
+
+        if (cleanUsername.isEmpty()) {
+            _error.value = "Username is required"
+            return@launch
+        }
+
+        if (cleanSex.isEmpty()) {
+            _error.value = "Sex is required"
+            return@launch
+        }
+
+        if (birthdayEpochMs <= 0L) {
+            _error.value = "Birthday is required"
+            return@launch
+        }
+
+        repo.isUsernameAvailable(cleanUsername)
+            .onSuccess { available ->
+                if (!available) {
+                    _error.value = "This username is already taken"
+                    return@onSuccess
+                }
+
+                val profile = UserProfile(
+                    uid = currentUser.uid,
+                    fullName = cleanFullName,
+                    username = cleanUsername,
+                    sex = cleanSex,
+                    birthdayEpochMs = birthdayEpochMs,
+                    email = currentUser.email ?: "",
+                    totalStudyTime = 0L
+                )
+
+                repo.saveCompletedUserProfile(profile)
+                    .onSuccess {
+                        _needsProfileCompletion.value = false
+                        startListening(currentUser.uid)
+                        onSuccess()
+                    }
+                    .onFailure { _error.value = it.message }
+            }
+            .onFailure { _error.value = it.message }
+    }
+
+    fun shouldCompleteProfile(): Boolean = _needsProfileCompletion.value
 }
+

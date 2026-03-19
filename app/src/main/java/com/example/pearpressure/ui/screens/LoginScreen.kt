@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
+    onRegisterNeedsProfile: () -> Unit,
     viewModel: com.example.pearpressure.MainViewModel
 ) {
     var email by remember { mutableStateOf("") }
@@ -53,7 +54,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (isRegistering) {
-                    viewModel.signUp(email, password, onLoginSuccess)
+                    viewModel.signUp(email, password, onRegisterNeedsProfile)
                 } else {
                     viewModel.signIn(email, password, onLoginSuccess)
                 }

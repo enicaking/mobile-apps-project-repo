@@ -12,6 +12,7 @@ class FirestoreRepository {
 
     // ── SUBJECTS ──────────────────────────────────────────
 
+
     suspend fun addSubject(subject: Subject): Result<Unit> = runCatching {
         // If subject.id is empty, Firestore will generate one.
         // If it has one (e.g. from @DocumentId), it will use it.
@@ -116,6 +117,24 @@ class FirestoreRepository {
     suspend fun createUserProfile(user: UserProfile) = runCatching {
         db.collection("users").document(user.uid).set(user).await()
     }  //for storing when creating user
+
+    suspend fun isUsernameAvailable(username: String): Result<Boolean> = runCatching {
+        val normalized = username.trim().lowercase()
+
+        val snapshot = db.collection("users")
+            .whereEqualTo("username", normalized)
+            .get()
+            .await()
+
+        snapshot.isEmpty
+    }
+
+    suspend fun saveCompletedUserProfile(user: UserProfile): Result<Unit> = runCatching {
+        val normalizedUser = user.copy(username = user.username.trim().lowercase())
+        db.collection("users").document(user.uid).set(normalizedUser).await()
+    }
+
+
     // ── SUBJECTS (owner OR member) ──────────────────────────
 // Devuelve 2 listeners (owned + member). El ViewModel los guardará y los cerrará.
     fun listenToSubjectsForUser(
