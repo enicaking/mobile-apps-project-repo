@@ -232,6 +232,11 @@ class MainViewModel : ViewModel() {
             )
         ).onFailure { _error.value = it.message }
     }
+    fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
+    //Esto se usa para mostrar el nombre de la asignatura arriba del crono.
+    fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
+    //Sirve para recuperar el examen elegido cuando vas a abrir el cronómetro.
+
 
     fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
         val currentUserId = authRepo.currentUser?.uid ?: return@launch
