@@ -24,3 +24,16 @@ data class UserProfile(
     val email: String = "",
     val totalStudyTime: Long = 0L // Esto nos servirá para el Ranking más adelante
 )
+
+data class FriendRequest(
+    @DocumentId val id: String = "",   // docId (lo usaremos como fromUid_toUid)
+    var fromUid: String = "",
+    var toUid: String = "",
+    var status: String = "pending",    // pending | accepted | declined
+    var createdAtEpochMs: Long = 0L
+)
+
+data class FriendLink(
+    @DocumentId val uid: String = "",  // docId = friendUid
+    var createdAtEpochMs: Long = 0L
+)
