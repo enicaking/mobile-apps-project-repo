@@ -14,11 +14,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.ui.StopwatchScreen
 import kotlinx.coroutines.delay
+import com.example.pearpressure.MainViewModel
+
 
 @Composable
 fun StopwatchPage(
+    viewModel: MainViewModel,
     subjectName: String,
     examTitle: String,
+    examId: String, // ✅ ADD THIS
     endsAtEpochMs: Long,
     onBack: () -> Unit
 ) {
@@ -71,6 +75,8 @@ fun StopwatchPage(
 
         // Cronómetro + texto debajo del cronómetro
         StopwatchScreen(
+            viewModel = viewModel,
+            examId = examId,
             showTitle = false,
             bottomInfoText = infoText
         )

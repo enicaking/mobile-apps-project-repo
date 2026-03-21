@@ -69,6 +69,14 @@ class MainViewModel : ViewModel() {
     private val _friendSearchError = MutableStateFlow<String?>(null)
     val friendSearchError: StateFlow<String?> = _friendSearchError
 
+
+    // Sessions
+
+    private val _sessions = MutableStateFlow<List<Session>>(emptyList())
+    val sessions: StateFlow<List<Session>> = _sessions
+
+    private var sessionsListener: ListenerRegistration? = null
+
     // listeners
     private var subjectsListeners: List<ListenerRegistration> = emptyList()
     private var examsListener: ListenerRegistration? = null
@@ -107,6 +115,12 @@ class MainViewModel : ViewModel() {
 
         // friends + requests
         startFriendsListeners(userId)
+
+        // sessions
+        sessionsListener?.remove()
+        sessionsListener = repo.listenToSessionsForUser(userId) {
+            _sessions.value = it
+        }
     }
 
     private fun startFriendsListeners(userId: String) {
@@ -344,12 +358,28 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+    // Function to save session
+    fun saveSession(examId: String, durationMs: Long) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+
+        val session = Session(
+            ownerId = userId,
+            examId = examId,
+            durationMs = durationMs,
+            createdAtEpochMs = System.currentTimeMillis()
+        )
+
+        repo.addSession(session)
+            .onFailure { _error.value = it.message }
+    }
+
     override fun onCleared() {
         subjectsListeners.forEach { it.remove() }
         examsListener?.remove()
         friendsListener?.remove()
         incomingReqListener?.remove()
         outgoingReqListener?.remove()
+        sessionsListener?.remove()
         super.onCleared()
     }
 
@@ -423,5 +453,10 @@ class MainViewModel : ViewModel() {
     }
 
     fun shouldCompleteProfile(): Boolean = _needsProfileCompletion.value
+
+    // ── Sessions actions
+
 }
+
+
 

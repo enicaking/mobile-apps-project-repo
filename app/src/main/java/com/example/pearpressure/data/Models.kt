@@ -41,4 +41,11 @@ data class FriendLink(
     var createdAtEpochMs: Long = 0L
 )
 
+data class Session(
+    @DocumentId val id: String = "",
+    var ownerId: String = "",
+    var examId: String = "",
+    var durationMs: Long = 0L,
+    var createdAtEpochMs: Long = 0L
+)
 

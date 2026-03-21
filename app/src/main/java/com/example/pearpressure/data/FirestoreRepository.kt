@@ -136,7 +136,7 @@ class FirestoreRepository {
 
 
     // ── SUBJECTS (owner OR member) ──────────────────────────
-// Devuelve 2 listeners (owned + member). El ViewModel los guardará y los cerrará.
+    // Devuelve 2 listeners (owned + member). El ViewModel los guardará y los cerrará.
     fun listenToSubjectsForUser(
         userId: String,
         onChange: (List<Subject>) -> Unit
@@ -168,7 +168,7 @@ class FirestoreRepository {
         return listOf(l1, l2)
     }
 
-// ── USERS ───────────────────────────────────────────────
+    // ── USERS ───────────────────────────────────────────────
 
     suspend fun getUserProfilesByIds(uids: List<String>): Result<List<UserProfile>> = runCatching {
         if (uids.isEmpty()) return@runCatching emptyList<UserProfile>()
@@ -317,6 +317,37 @@ class FirestoreRepository {
 
         batch.commit().await()
     }
+
+
+    // ── SESSIONS ───────────────────────────────────────────────
+
+
+    suspend fun addSession(session: Session): Result<Unit> = runCatching {
+        val docRef = db.collection("sessions").document()
+        val sessionWithId = session.copy(id = docRef.id)
+        docRef.set(sessionWithId).await()
+    }
+
+    suspend fun getSessionsForUser(userId: String): Result<List<Session>> = runCatching {
+        db.collection("sessions")
+            .whereEqualTo("ownerId", userId)
+            .get()
+            .await()
+            .toObjects(Session::class.java)
+    }
+
+    fun listenToSessionsForUser(
+        userId: String,
+        onChange: (List<Session>) -> Unit
+    ): ListenerRegistration {
+        return db.collection("sessions")
+            .whereEqualTo("ownerId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                onChange(snapshot.toObjects(Session::class.java))
+            }
+    }
+
 }
 
 

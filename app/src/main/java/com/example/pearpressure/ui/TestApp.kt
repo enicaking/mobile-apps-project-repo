@@ -142,7 +142,9 @@ private fun HomeFlow(viewModel: MainViewModel) {
             }
 
             StopwatchPage(
+                viewModel = viewModel,
                 subjectName = subject.name,
+                examId = exam.id,
                 examTitle = exam.title,
                 endsAtEpochMs = exam.endsAtEpochMs,
                 onBack = { screen = HomeScreen.EXAMS }
