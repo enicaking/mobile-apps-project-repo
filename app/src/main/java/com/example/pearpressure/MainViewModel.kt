@@ -261,6 +261,11 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun addMemberToSubject(subjectId: String, userIdToAdd: String) = viewModelScope.launch {
+        repo.addMemberToSubject(subjectId, userIdToAdd)
+            .onFailure { _error.value = it.message }
+    }
+
     fun deleteExam(examId: String) = viewModelScope.launch {
         repo.deleteExam(examId).onFailure { _error.value = it.message }
     }

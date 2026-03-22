@@ -93,6 +93,13 @@ class FirestoreRepository {
             .await()
     }
 
+    suspend fun addMemberToSubject(subjectId: String, userId: String): Result<Unit> = runCatching {
+        db.collection("subjects")
+            .document(subjectId)
+            .update("members", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+            .await()
+    }
+
     // ── REAL-TIME LISTENERS ───────────────────────────────
 
     // Cambia la función de escuchar asignaturas

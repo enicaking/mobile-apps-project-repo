@@ -115,19 +115,48 @@ private fun HomeFlow(viewModel: MainViewModel) {
                 return
             }
 
+            val currentUserId = viewModel.getCurrentUserId()
+            val isOwner = subject.ownerId == currentUserId
+
             ExamsScreen(
                 subjectName = subject.name,
                 exams = exams,
-                onAddExam = { title, endsAtMs ->
-                    viewModel.addExam(subjectId = subject.id, title = title, endsAtMs = endsAtMs)
+
+                // ✅ NEW
+                isOwner = isOwner,
+
+                onAddMember = {
+                    // TODO: open dialog / navigate to add member screen
+                    // For now, you can log or leave empty
+                    val testUserId = "someUserUid"
+                    viewModel.addMemberToSubject(subject.id, testUserId)
+                    // viewModel.searchUserByEmail(email)
+                    // viewModel.addMemberToSubject(subject.id, user.uid)
                 },
+
+                onLeaveSubject = {
+                    viewModel.deleteOrLeaveSubject(subject)
+                    screen = HomeScreen.SUBJECTS
+                },
+
+                // Existing logic
+                onAddExam = { title, endsAtMs ->
+                    viewModel.addExam(
+                        subjectId = subject.id,
+                        title = title,
+                        endsAtMs = endsAtMs
+                    )
+                },
+
                 onOpenInProgressExam = { exam ->
                     selectedExamId = exam.id
                     screen = HomeScreen.STOPWATCH
                 },
-                onDeleteExam = { examId -> //to delete exam
+
+                onDeleteExam = { examId ->
                     viewModel.deleteExam(examId)
                 },
+
                 onBack = { screen = HomeScreen.SUBJECTS }
             )
         }

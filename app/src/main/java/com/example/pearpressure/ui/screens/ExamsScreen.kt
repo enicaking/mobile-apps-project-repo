@@ -27,9 +27,12 @@ import java.util.Locale
 fun ExamsScreen(
     subjectName: String,
     exams: List<Exam>,
+    isOwner: Boolean,
+    onAddMember: () -> Unit,
+    onLeaveSubject: () -> Unit,
     onAddExam: (title: String, endsAtMs: Long) -> Unit,
     onOpenInProgressExam: (Exam) -> Unit,
-    onDeleteExam: (String) -> Unit, // AÑADIDO
+    onDeleteExam: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -72,13 +75,26 @@ fun ExamsScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
-            Button(onClick = {
+            Button(
+                onClick = {
+                    if (isOwner) onAddMember() else onLeaveSubject()
+                }
+            ) {
+                Text(if (isOwner) "Add Member" else "Leave Subject")
+            }
+        }
+
+        Button(
+            onClick = {
                 newTitle = ""
                 selectedEndsAtMs = null
                 showCreateDialog = true
-            }) {
-                Text("Add Exam")
-            }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+        ) {
+            Text("Add Exam")
         }
 
         if (exams.isEmpty()) {
@@ -95,6 +111,7 @@ fun ExamsScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 items(exams) { exam ->
                     ExamCard(
                         exam = exam,
