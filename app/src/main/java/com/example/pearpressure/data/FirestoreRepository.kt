@@ -218,6 +218,8 @@ class FirestoreRepository {
             }
     }
 
+
+
     fun listenIncomingFriendRequests(
         myUid: String,
         onChange: (List<FriendRequest>) -> Unit
@@ -354,6 +356,9 @@ class FirestoreRepository {
                 onChange(snapshot.toObjects(Session::class.java))
             }
     }
+
+    // --- ADD FRIENDS TO SUBJECT
+
 
 }
 

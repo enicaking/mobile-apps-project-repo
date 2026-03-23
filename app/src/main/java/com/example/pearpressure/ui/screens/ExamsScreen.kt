@@ -1,4 +1,6 @@
 package com.example.pearpressure.ui.screens
+import com.example.pearpressure.data.UserProfile
+import com.example.pearpressure.data.Exam
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -8,7 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete // AÑADIDO
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.pearpressure.data.Exam
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -28,6 +29,9 @@ fun ExamsScreen(
     subjectName: String,
     exams: List<Exam>,
     isOwner: Boolean,
+    friends: List<UserProfile>,
+    onSearchFriends: (String) -> Unit,
+    onUserSelected: (UserProfile) -> Unit,
     onAddMember: () -> Unit,
     onLeaveSubject: () -> Unit,
     onAddExam: (title: String, endsAtMs: Long) -> Unit,
@@ -45,6 +49,9 @@ fun ExamsScreen(
             nowMs = System.currentTimeMillis()
         }
     }
+
+    var showDialog by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
@@ -77,7 +84,12 @@ fun ExamsScreen(
             )
             Button(
                 onClick = {
-                    if (isOwner) onAddMember() else onLeaveSubject()
+                    if (isOwner) {
+                        showDialog = true
+                        onAddMember()
+                    } else {
+                        onLeaveSubject()
+                    }
                 }
             ) {
                 Text(if (isOwner) "Add Member" else "Leave Subject")
@@ -195,6 +207,55 @@ fun ExamsScreen(
             }
         )
     }
+    // Search and add member from friends
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Add Friend to Subject") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = {
+                            query = it
+                            onSearchFriends(it)
+                        },
+                        label = { Text("Search friends") }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    friends.forEach { user ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(user.fullName)
+
+                            TextButton(
+                                onClick = {
+                                    onUserSelected(user)
+                                    showDialog = false
+                                    query = ""
+                                }
+                            ) {
+                                Text("Add")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
 
     // Finished Exam Alert
     if (showFinishedDialog) {

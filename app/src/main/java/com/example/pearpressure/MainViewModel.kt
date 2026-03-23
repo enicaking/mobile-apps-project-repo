@@ -52,6 +52,9 @@ class MainViewModel : ViewModel() {
     private val _friends = MutableStateFlow<List<UserProfile>>(emptyList())
     val friends: StateFlow<List<UserProfile>> = _friends
 
+    private val _filteredFriends = MutableStateFlow<List<UserProfile>>(emptyList())
+    val filteredFriends: StateFlow<List<UserProfile>> = _filteredFriends
+
     private val _incomingRequests = MutableStateFlow<List<IncomingFriendRequestUi>>(emptyList())
     val incomingRequests: StateFlow<List<IncomingFriendRequestUi>> = _incomingRequests
 
@@ -128,7 +131,10 @@ class MainViewModel : ViewModel() {
         friendsListener = repo.listenFriends(userId) { friendUids ->
             viewModelScope.launch {
                 repo.getUserProfilesByIds(friendUids)
-                    .onSuccess { _friends.value = it }
+                    .onSuccess {
+                        _friends.value = it
+                        _filteredFriends.value = it
+                    }
                     .onFailure { _error.value = it.message }
             }
         }
@@ -459,7 +465,21 @@ class MainViewModel : ViewModel() {
 
     fun shouldCompleteProfile(): Boolean = _needsProfileCompletion.value
 
-    // ── Sessions actions
+    // ── Adding member actions
+
+    fun searchFriends(query: String) {
+        val currentFriends = _friends.value
+
+        _filteredFriends.value = if (query.isBlank()) {
+            currentFriends
+        } else {
+            currentFriends.filter {
+                it.fullName.contains(query, ignoreCase = true) ||
+                        it.email.contains(query, ignoreCase = true) ||
+                        it.username.contains(query, ignoreCase = true)
+            }
+        }
+    }
 
 }
 

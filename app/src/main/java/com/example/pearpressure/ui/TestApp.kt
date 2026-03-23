@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.ui.screens.*
+import com.example.pearpressure.data.UserProfile
 
 private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
@@ -117,21 +118,26 @@ private fun HomeFlow(viewModel: MainViewModel) {
 
             val currentUserId = viewModel.getCurrentUserId()
             val isOwner = subject.ownerId == currentUserId
+            val friends by viewModel.filteredFriends.collectAsState()
 
             ExamsScreen(
                 subjectName = subject.name,
                 exams = exams,
-
-                // ✅ NEW
                 isOwner = isOwner,
+                friends = friends,
+
+                onSearchFriends = { query ->
+                    viewModel.searchFriends(query)
+                },
+
+                onUserSelected = { user ->
+                    if (!subject.members.contains(user.uid)) {
+                        viewModel.addMemberToSubject(subject.id, user.uid)
+                    }
+                },
 
                 onAddMember = {
-                    // TODO: open dialog / navigate to add member screen
-                    // For now, you can log or leave empty
-                    val testUserId = "someUserUid"
-                    viewModel.addMemberToSubject(subject.id, testUserId)
-                    // viewModel.searchUserByEmail(email)
-                    // viewModel.addMemberToSubject(subject.id, user.uid)
+                    viewModel.searchFriends("") // preload all friends
                 },
 
                 onLeaveSubject = {
