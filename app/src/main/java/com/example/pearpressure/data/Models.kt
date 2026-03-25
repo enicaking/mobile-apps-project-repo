@@ -15,7 +15,12 @@ data class Exam(
     var subjectId: String = "",
     var ownerId: String = "", //Para filtrar exámenes por usuario
     var title: String = "",
-    var endsAtEpochMs: Long = 0L
+    var endsAtEpochMs: Long = 0L,
+
+    //ADDED FOR EXPECTED GRADE, REAL GRADE, SLEEPING HOURS
+    var expectedGrades: Map<String, Double> = emptyMap(),
+    var actualGrades: Map<String, Double> = emptyMap(),
+    var sleepHours: Map<String, Double> = emptyMap()
 )
 
 data class UserProfile(

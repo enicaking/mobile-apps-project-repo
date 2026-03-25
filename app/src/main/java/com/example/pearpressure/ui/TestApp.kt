@@ -21,7 +21,6 @@ private enum class AuthScreen {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-
 @Composable
 fun TestApp(viewModel: MainViewModel = viewModel()) {
     var authScreen by remember {
@@ -47,6 +46,7 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
         }
 
         AuthScreen.APP -> {
+            val tabs = listOf(MainTab.HOME, MainTab.RANKING, MainTab.FRIENDS, MainTab.PROFILE)
             var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
 
             Scaffold(
@@ -96,14 +96,14 @@ private fun HomeFlow(viewModel: MainViewModel) {
         HomeScreen.SUBJECTS -> {
             SubjectsScreen(
                 subjects = subjects,
-                currentUserId = viewModel.getCurrentUserId(), // <--- AÑADIDO
+                currentUserId = viewModel.getCurrentUserId(),
                 onAddSubject = { name -> viewModel.addSubject(name) },
                 onOpenSubject = { subjectId ->
                     selectedSubjectId = subjectId
                     viewModel.loadExams(subjectId)
                     screen = HomeScreen.EXAMS
                 },
-                onActionSubject = { subject -> // <--- AÑADIDO
+                onActionSubject = { subject ->
                     viewModel.deleteOrLeaveSubject(subject)
                 }
             )
@@ -120,11 +120,13 @@ private fun HomeFlow(viewModel: MainViewModel) {
             val isOwner = subject.ownerId == currentUserId
             val friends by viewModel.filteredFriends.collectAsState()
 
+            // Now passing currentUserId and onSaveResults callback
             ExamsScreen(
                 subjectName = subject.name,
                 exams = exams,
                 isOwner = isOwner,
                 friends = friends,
+                currentUserId = currentUserId, // This fixes the red error!
 
                 onSearchFriends = { query ->
                     viewModel.searchFriends(query)
@@ -137,7 +139,7 @@ private fun HomeFlow(viewModel: MainViewModel) {
                 },
 
                 onAddMember = {
-                    viewModel.searchFriends("") // preload all friends
+                    viewModel.searchFriends("")
                 },
 
                 onLeaveSubject = {
@@ -145,7 +147,6 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     screen = HomeScreen.SUBJECTS
                 },
 
-                // Existing logic
                 onAddExam = { title, endsAtMs ->
                     viewModel.addExam(
                         subjectId = subject.id,
@@ -163,7 +164,12 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     viewModel.deleteExam(examId)
                 },
 
-                onBack = { screen = HomeScreen.SUBJECTS }
+                onBack = { screen = HomeScreen.SUBJECTS },
+
+                // This saves the stats to the database
+                onSaveResults = { examId, expected, sleep, actual ->
+                    viewModel.saveExamResults(examId, expected, sleep, actual)
+                }
             )
         }
 

@@ -360,6 +360,48 @@ class FirestoreRepository {
     // --- ADD FRIENDS TO SUBJECT
 
 
+    //
+    // In FirestoreRepository
+    suspend fun updateExamUserData(
+        examId: String,
+        userId: String,
+        expectedGrade: Double?,
+        sleepHours: Double?,
+        actualGrade: Double? = null
+    ): Result<Unit> = runCatching {
+        val updates = mutableMapOf<String, Any>()
+
+        expectedGrade?.let { updates["expectedGrades.$userId"] = it }
+        sleepHours?.let { updates["sleepHours.$userId"] = it }
+        actualGrade?.let { updates["actualGrades.$userId"] = it }
+
+        db.collection("exams").document(examId).update(updates).await()
+    }
+
+    // Add this to FirestoreRepository.kt
+    suspend fun updateExamStats(
+        examId: String,
+        userId: String,
+        expected: Double?,
+        sleep: Double?,
+        actual: Double?
+    ): Result<Unit> = try {
+        val updates = mutableMapOf<String, Any>()
+
+        // We use "fieldName.$userId" to update ONLY this user's entry in the map
+        expected?.let { updates["expectedGrades.$userId"] = it }
+        sleep?.let { updates["sleepHours.$userId"] = it }
+        actual?.let { updates["actualGrades.$userId"] = it }
+
+        if (updates.isNotEmpty()) {
+            db.collection("exams").document(examId).update(updates).await()
+        }
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+
 }
 
 

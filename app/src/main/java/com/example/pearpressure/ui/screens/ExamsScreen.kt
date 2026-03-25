@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -30,6 +32,7 @@ fun ExamsScreen(
     exams: List<Exam>,
     isOwner: Boolean,
     friends: List<UserProfile>,
+    currentUserId: String, // ✅ ADDED THIS to identify who is saving
     onSearchFriends: (String) -> Unit,
     onUserSelected: (UserProfile) -> Unit,
     onAddMember: () -> Unit,
@@ -37,7 +40,9 @@ fun ExamsScreen(
     onAddExam: (title: String, endsAtMs: Long) -> Unit,
     onOpenInProgressExam: (Exam) -> Unit,
     onDeleteExam: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    // NEW: Callback to save the results
+    onSaveResults: (examId: String, expected: Double?, sleep: Double?, actual: Double?) -> Unit = { _, _, _, _ -> }
 ) {
     val context = LocalContext.current
 
@@ -56,7 +61,12 @@ fun ExamsScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
     var selectedEndsAtMs by remember { mutableStateOf<Long?>(null) }
-    var showFinishedDialog by remember { mutableStateOf(false) }
+
+    // Changed to store the specific exam being edited
+    var examForResults by remember { mutableStateOf<Exam?>(null) }
+    var expectedInput by remember { mutableStateOf("") }
+    var sleepInput by remember { mutableStateOf("") }
+    var actualInput by remember { mutableStateOf("") }
 
     // Estado para controlar qué examen se quiere borrar y mostrar el diálogo
     var examToDelete by remember { mutableStateOf<Exam?>(null) }
@@ -129,7 +139,19 @@ fun ExamsScreen(
                         exam = exam,
                         nowMs = nowMs,
                         onOpenInProgressExam = onOpenInProgressExam,
-                        onOpenFinishedExam = { showFinishedDialog = true },
+                        onOpenFinishedExam = {
+                            // Check if exam finished less than 2 days ago
+                            val twoDaysInMs = 2 * 24 * 60 * 60 * 1000L
+                            if (nowMs - exam.endsAtEpochMs < twoDaysInMs) {
+                                examForResults = exam
+                                // Reset inputs or pre-fill if you have existing data
+                                expectedInput = ""
+                                sleepInput = ""
+                                actualInput = ""
+                            } else {
+                                // If more than 2 days, just show alert (optional)
+                            }
+                        },
                         onDelete = { examToDelete = exam } // Cambiado para abrir diálogo
                     )
                 }
@@ -257,14 +279,71 @@ fun ExamsScreen(
     }
 
 
-    // Finished Exam Alert
-    if (showFinishedDialog) {
+    // MODIFIED: Post-Exam Results Dialog with Sequential Phase Logic
+    examForResults?.let { exam ->
+        // Check if the current user has already saved stats in the database
+        val hasExpected = exam.expectedGrades.containsKey(currentUserId)
+        val hasSleep = exam.sleepHours.containsKey(currentUserId)
+        val hasReal = exam.actualGrades.containsKey(currentUserId)
+
         AlertDialog(
-            onDismissRequest = { showFinishedDialog = false },
-            title = { Text("Exam Finished") },
-            text = { Text("This exam has already passed. The stopwatch is only available for active exams.") },
+            onDismissRequest = { examForResults = null },
+            title = {
+                Text(if (!hasExpected || !hasSleep) "Post-Exam Info" else "Final Result")
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (!hasExpected || !hasSleep) {
+                        Text("Please use numeric format (e.g., 8.5 or 7)", style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = expectedInput,
+                            onValueChange = { expectedInput = it },
+                            label = { Text("Expected Grade (0.0-10)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = sleepInput,
+                            onValueChange = { sleepInput = it },
+                            label = { Text("Sleep Hours (Night before)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (!hasReal) {
+                        Text("Stats saved! Now, enter your real grade (0.0-10):", style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = actualInput,
+                            onValueChange = { actualInput = it },
+                            label = { Text("Real Grade") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        // All steps finished
+                        Text("This exam is completed. Great job!")
+                    }
+                }
+            },
             confirmButton = {
-                Button(onClick = { showFinishedDialog = false }) { Text("Got it") }
+                if (!hasReal) {
+                    Button(onClick = {
+                        if (!hasExpected || !hasSleep) {
+                            // Phase 1: Save Expected & Sleep
+                            onSaveResults(exam.id, expectedInput.toDoubleOrNull(), sleepInput.toDoubleOrNull(), null)
+                        } else {
+                            // Phase 2: Save Real Grade
+                            onSaveResults(exam.id, null, null, actualInput.toDoubleOrNull())
+                        }
+                        examForResults = null // Close dialog
+                    }) {
+                        Text("Save Information")
+                    }
+                } else {
+                    Button(onClick = { examForResults = null }) { Text("Got it") }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { examForResults = null }) { Text("Close") }
             }
         )
     }

@@ -481,6 +481,28 @@ class MainViewModel : ViewModel() {
         }
     }
 
+
+    //
+    // ── Exam Results Logic (Step 1 & Step 2)
+    fun saveExamResults(
+        examId: String,
+        expected: Double?,
+        sleep: Double?,
+        actual: Double?
+    ) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+
+        repo.updateExamStats(
+            examId = examId,
+            userId = userId,
+            expected = expected,
+            sleep = sleep,
+            actual = actual
+        ).onFailure {
+            _error.value = "Failed to save stats: ${it.message}"
+        }
+    }
+
 }
 
 
