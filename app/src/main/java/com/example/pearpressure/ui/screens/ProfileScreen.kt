@@ -18,6 +18,7 @@ fun ProfileScreen(
     onLogout: () -> Unit
 ) {
     val email = viewModel.getCurrentUserEmail()
+    val username = viewModel.getCurrentUserName()
 
     Column(
         modifier = Modifier
@@ -42,6 +43,12 @@ fun ProfileScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = username,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
 
         Text(
             text = "Logged in as:",
