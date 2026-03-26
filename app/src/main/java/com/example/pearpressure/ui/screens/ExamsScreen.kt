@@ -1,4 +1,5 @@
 package com.example.pearpressure.ui.screens
+
 import com.example.pearpressure.data.UserProfile
 import com.example.pearpressure.data.Exam
 
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -32,7 +34,7 @@ fun ExamsScreen(
     exams: List<Exam>,
     isOwner: Boolean,
     friends: List<UserProfile>,
-    currentUserId: String, // ✅ ADDED THIS to identify who is saving
+    currentUserId: String, //THIS to identify who is saving
     onSearchFriends: (String) -> Unit,
     onUserSelected: (UserProfile) -> Unit,
     onAddMember: () -> Unit,
@@ -138,19 +140,15 @@ fun ExamsScreen(
                     ExamCard(
                         exam = exam,
                         nowMs = nowMs,
+                        currentUserId = currentUserId, // ✅ PASSING ID TO CARD
                         onOpenInProgressExam = onOpenInProgressExam,
                         onOpenFinishedExam = {
-                            // Check if exam finished less than 2 days ago
-                            val twoDaysInMs = 2 * 24 * 60 * 60 * 1000L
-                            if (nowMs - exam.endsAtEpochMs < twoDaysInMs) {
-                                examForResults = exam
-                                // Reset inputs or pre-fill if you have existing data
-                                expectedInput = ""
-                                sleepInput = ""
-                                actualInput = ""
-                            } else {
-                                // If more than 2 days, just show alert (optional)
-                            }
+                            // ✅ FIX: Removed the "2-day" check that was blocking the dialog
+                            examForResults = exam
+                            // Reset inputs or pre-fill if you have existing data
+                            expectedInput = ""
+                            sleepInput = ""
+                            actualInput = ""
                         },
                         onDelete = { examToDelete = exam } // Cambiado para abrir diálogo
                     )
@@ -158,7 +156,6 @@ fun ExamsScreen(
             }
         }
     }
-
 
     if (showCreateDialog) {
         AlertDialog(
@@ -229,7 +226,7 @@ fun ExamsScreen(
             }
         )
     }
-    // Search and add member from friends
+
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -278,10 +275,7 @@ fun ExamsScreen(
         )
     }
 
-
-    // MODIFIED: Post-Exam Results Dialog with Sequential Phase Logic
     examForResults?.let { exam ->
-        // Check if the current user has already saved stats in the database
         val hasExpected = exam.expectedGrades.containsKey(currentUserId)
         val hasSleep = exam.sleepHours.containsKey(currentUserId)
         val hasReal = exam.actualGrades.containsKey(currentUserId)
@@ -319,7 +313,6 @@ fun ExamsScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        // All steps finished
                         Text("This exam is completed. Great job!")
                     }
                 }
@@ -328,13 +321,11 @@ fun ExamsScreen(
                 if (!hasReal) {
                     Button(onClick = {
                         if (!hasExpected || !hasSleep) {
-                            // Phase 1: Save Expected & Sleep
                             onSaveResults(exam.id, expectedInput.toDoubleOrNull(), sleepInput.toDoubleOrNull(), null)
                         } else {
-                            // Phase 2: Save Real Grade
                             onSaveResults(exam.id, null, null, actualInput.toDoubleOrNull())
                         }
-                        examForResults = null // Close dialog
+                        examForResults = null
                     }) {
                         Text("Save Information")
                     }
@@ -348,8 +339,9 @@ fun ExamsScreen(
         )
     }
 
-    // Confirmation dialog for deleting an exam
-    examToDelete?.let { exam ->
+    // FIXED: Corrected the structure of the Delete Dialog
+    if (examToDelete != null) {
+        val exam = examToDelete!!
         AlertDialog(
             onDismissRequest = { examToDelete = null },
             title = { Text("Delete Exam") },
@@ -378,17 +370,28 @@ fun ExamsScreen(
 private fun ExamCard(
     exam: Exam,
     nowMs: Long,
+    currentUserId: String, // ADDED TO HANDLE PERSONAL STATUS
     onOpenInProgressExam: (Exam) -> Unit,
     onOpenFinishedExam: () -> Unit,
     onDelete: () -> Unit //to delete exam
 ) {
-    val inProgress = nowMs < exam.endsAtEpochMs
+    val isPastDeadline = nowMs > exam.endsAtEpochMs
+    val hasExpected = exam.expectedGrades.containsKey(currentUserId)
+    val hasReal = exam.actualGrades.containsKey(currentUserId)
+
+    // NO MORE \n - Single line status
+    val statusText = when {
+        !isPastDeadline -> "In Progress"
+        !hasExpected -> "Waiting for Expected Grade"
+        !hasReal -> "Waiting for Final Grade"
+        else -> "Finished"
+    }
 
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                if (inProgress) onOpenInProgressExam(exam) else onOpenFinishedExam()
+                if (!isPastDeadline) onOpenInProgressExam(exam) else onOpenFinishedExam()
             }
     ) {
         Row(
@@ -410,11 +413,10 @@ private fun ExamCard(
                 )
             }
 
-            // Fila para el status pill y el botón de borrar
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusPill(
-                    text = if (inProgress) "In Progress" else "Finished",
-                    isPositive = inProgress
+                    text = statusText,
+                    isPositive = !isPastDeadline || (hasExpected && hasReal)
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -435,10 +437,10 @@ private fun ExamCard(
 @Composable
 private fun StatusPill(text: String, isPositive: Boolean) {
     val bg = if (isPositive) MaterialTheme.colorScheme.primaryContainer
-    else MaterialTheme.colorScheme.surfaceVariant
+    else MaterialTheme.colorScheme.errorContainer
 
     val fg = if (isPositive) MaterialTheme.colorScheme.onPrimaryContainer
-    else MaterialTheme.colorScheme.onSurfaceVariant
+    else MaterialTheme.colorScheme.onErrorContainer
 
     Surface(
         color = bg,
