@@ -19,6 +19,7 @@ fun ProfileScreen(
 ) {
     val email = viewModel.getCurrentUserEmail()
     val username = viewModel.getCurrentUserName()
+    val totalstudytime = viewModel.getCurrentUserTime()
 
     Column(
         modifier = Modifier
@@ -45,21 +46,30 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
+            text = "Logged in as:",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.secondary
+        )
+
+        Text(
             text = username,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
 
         Text(
-            text = "Logged in as:",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Text(
             text = email,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Total time studied: " + formatStudyTime(totalstudytime),
+            style = MaterialTheme.typography.titleLarge
+        )
+
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -80,5 +90,17 @@ fun ProfileScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+private fun formatStudyTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes }min"
+        else -> "Less than 1 min"
     }
 }

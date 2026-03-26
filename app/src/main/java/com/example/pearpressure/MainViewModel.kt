@@ -91,6 +91,7 @@ class MainViewModel : ViewModel() {
     private var incomingReqListener: ListenerRegistration? = null
     private var outgoingReqListener: ListenerRegistration? = null
 
+
     init {
         authRepo.currentUser?.uid?.let { startListening(it) }
     }
@@ -128,6 +129,7 @@ class MainViewModel : ViewModel() {
             _sessions.value = it
         }
     }
+
 
     private fun startFriendsListeners(userId: String) {
         friendsListener?.remove()
@@ -385,6 +387,9 @@ class MainViewModel : ViewModel() {
     fun getCurrentUserName(): String =
         currentUserProfile.value?.username ?: "No username"
 
+    fun getCurrentUserTime(): Long =
+        currentUserProfile.value?.totalStudyTime ?: 10000000
+
 
     override fun onCleared() {
         subjectsListeners.forEach { it.remove() }
@@ -511,11 +516,14 @@ class MainViewModel : ViewModel() {
             energyDrinkCount = energy,
             bathroomBreaks = bathroom
         )
-
+        // Add session into firestore
         repo.addSession(session).onFailure { _error.value = it.message }
 
-        // También actualizamos el tiempo total para que suba en el Ranking
-        repo.updateUserTotalStudyTime(userId, durationMs).onFailure { _error.value = it.message }
+        // Add this session to user's total study time
+        repo.updateUserTotalStudyTime(userId, durationMs)
+            .onFailure { _error.value = it.message }
+
+        loadCurrentUserProfile() // Refresh so that the totals are updated
     }
 
 }
