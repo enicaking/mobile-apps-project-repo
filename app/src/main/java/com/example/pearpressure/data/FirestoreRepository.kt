@@ -368,12 +368,15 @@ class FirestoreRepository {
 
     suspend fun updateExamStats(
         examId: String,
-        userId: String,
+        userId: String, // We MUST pass the current user's ID here
         expected: Double?,
         sleep: Double?,
         actual: Double?
     ): Result<Unit> = runCatching {
         val updates = mutableMapOf<String, Any>()
+
+        // Using dot notation "field.key" tells Firestore to update ONLY that
+        // specific user's entry inside the Map without deleting others!
         expected?.let { updates["expectedGrades.$userId"] = it }
         sleep?.let { updates["sleepHours.$userId"] = it }
         actual?.let { updates["actualGrades.$userId"] = it }
