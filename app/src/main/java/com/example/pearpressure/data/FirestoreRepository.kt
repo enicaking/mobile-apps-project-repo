@@ -177,6 +177,14 @@ class FirestoreRepository {
 
     // ── USERS ───────────────────────────────────────────────
 
+    suspend fun getUserProfile(uid: String): Result<UserProfile?> = runCatching {
+        db.collection("users")
+            .document(uid)
+            .get()
+            .await()
+            .toObject(UserProfile::class.java)
+    }
+
     suspend fun getUserProfilesByIds(uids: List<String>): Result<List<UserProfile>> = runCatching {
         if (uids.isEmpty()) return@runCatching emptyList<UserProfile>()
 

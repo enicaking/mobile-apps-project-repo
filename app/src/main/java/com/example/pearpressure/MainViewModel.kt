@@ -72,6 +72,9 @@ class MainViewModel : ViewModel() {
     private val _friendSearchError = MutableStateFlow<String?>(null)
     val friendSearchError: StateFlow<String?> = _friendSearchError
 
+    // Profile
+    private val _currentUserProfile = MutableStateFlow<UserProfile?>(null)
+    val currentUserProfile: StateFlow<UserProfile?> = _currentUserProfile
 
     // Sessions
 
@@ -369,6 +372,18 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+    // Profile
+    fun loadCurrentUserProfile() {
+        val uid = authRepo.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            repo.getUserProfile(uid)
+                .onSuccess { _currentUserProfile.value = it }
+        }
+    }
+
+    fun getCurrentUserName(): String =
+        currentUserProfile.value?.username ?: "No username"
 
 
     override fun onCleared() {
