@@ -329,13 +329,19 @@ class FirestoreRepository {
 
 
     // ── SESSIONS ───────────────────────────────────────────────
-
-
     suspend fun addSession(session: Session): Result<Unit> = runCatching {
+        // Generate a clean document reference
         val docRef = db.collection("sessions").document()
+
+        // Create a copy that includes the generated ID so the document
+        // inside Firestore knows its own ID
         val sessionWithId = session.copy(id = docRef.id)
+
+        // .set() takes the WHOLE object and maps it to Firestore fields
         docRef.set(sessionWithId).await()
+
     }
+
 
     suspend fun getSessionsForUser(userId: String): Result<List<Session>> = runCatching {
         db.collection("sessions")
@@ -358,37 +364,16 @@ class FirestoreRepository {
     }
 
     // --- ADD FRIENDS TO SUBJECT
+    // ── STATS & RANKING UPDATES (RECUPERADAS) ──────────────────
 
-
-    //
-    // In FirestoreRepository
-    suspend fun updateExamUserData(
-        examId: String,
-        userId: String,
-        expectedGrade: Double?,
-        sleepHours: Double?,
-        actualGrade: Double? = null
-    ): Result<Unit> = runCatching {
-        val updates = mutableMapOf<String, Any>()
-
-        expectedGrade?.let { updates["expectedGrades.$userId"] = it }
-        sleepHours?.let { updates["sleepHours.$userId"] = it }
-        actualGrade?.let { updates["actualGrades.$userId"] = it }
-
-        db.collection("exams").document(examId).update(updates).await()
-    }
-
-    // Add this to FirestoreRepository.kt
     suspend fun updateExamStats(
         examId: String,
         userId: String,
         expected: Double?,
         sleep: Double?,
         actual: Double?
-    ): Result<Unit> = try {
+    ): Result<Unit> = runCatching {
         val updates = mutableMapOf<String, Any>()
-
-        // We use "fieldName.$userId" to update ONLY this user's entry in the map
         expected?.let { updates["expectedGrades.$userId"] = it }
         sleep?.let { updates["sleepHours.$userId"] = it }
         actual?.let { updates["actualGrades.$userId"] = it }
@@ -396,9 +381,12 @@ class FirestoreRepository {
         if (updates.isNotEmpty()) {
             db.collection("exams").document(examId).update(updates).await()
         }
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
+    }
+
+    suspend fun updateUserTotalStudyTime(userId: String, durationMs: Long): Result<Unit> = runCatching {
+        db.collection("users").document(userId)
+            .update("totalStudyTime", com.google.firebase.firestore.FieldValue.increment(durationMs))
+            .await()
     }
 
 

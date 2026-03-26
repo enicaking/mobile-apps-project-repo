@@ -53,7 +53,8 @@ fun StopwatchScreen(
     examId: String,
     modifier: Modifier = Modifier,
     showTitle: Boolean = true,
-    bottomInfoText: String? = null
+    bottomInfoText: String? = null,
+    onBack: () -> Unit = {}   //{} means not mandatory
 ) {
     // -----------------------------
     // Stopwatch state
@@ -62,6 +63,14 @@ fun StopwatchScreen(
     var startElapsedMs by remember { mutableStateOf(0L) }
     var accumulatedMs by remember { mutableStateOf(0L) }
     var displayMs by remember { mutableStateOf(0L) }
+
+    // --- Summary Dialog States ---
+    var showSummary by remember { mutableStateOf(false) }
+    var lastSavedTime by remember { mutableStateOf(0L) }
+    var lastSavedCoffee by remember { mutableStateOf(0) }
+    var lastSavedWater by remember { mutableStateOf(0.0) }
+    var lastSavedBoost by remember { mutableStateOf(0) }
+    var lastSavedPoop by remember { mutableStateOf(0) }
 
     val allSessions by viewModel.sessions.collectAsState()
 
@@ -108,12 +117,10 @@ fun StopwatchScreen(
     var waterInput by remember { mutableStateOf("") }
     var waterError by remember { mutableStateOf<String?>(null) }
 
-    // Central handler (Option 2 pattern)
+    // Central handler
     val onQuickAction: (String) -> Unit = { action ->
         when (action) {
-            "poop" -> {
-                showPoopConfirm = true
-            }
+            "poop" -> { showPoopConfirm = true }
             "coffee" -> showCoffeeDialog = true
             "boost" -> showBoostDialog = true
             "water" -> {
@@ -142,9 +149,7 @@ fun StopwatchScreen(
             )
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Time")
                 Text(
@@ -197,15 +202,35 @@ fun StopwatchScreen(
                         isRunning = false
                     }
 
-                    // 🔥 SAVE TO FIRESTORE
+                    // 1. Store current counts for Summary Dialog
+                    lastSavedTime = displayMs
+                    lastSavedCoffee = coffeeCounts.values.sum()
+                    lastSavedWater = waterTotalLiters
+                    lastSavedBoost = boostCounts.values.sum()
+                    lastSavedPoop = poopCount
+
+                    val waterGlasses = (waterTotalLiters / 0.25).toInt()
+
+                    // 2. 🔥 SAVE TO FIRESTORE
                     viewModel.saveSession(
                         examId = examId,
-                        durationMs = displayMs
+                        durationMs = displayMs,
+                        water = waterGlasses,
+                        coffee = lastSavedCoffee,
+                        energy = lastSavedBoost,
+                        bathroom = lastSavedPoop
                     )
 
-                    // Reset
+                    // 3. Show Success Summary
+                    showSummary = true
+
+                    // 4. Reset local UI
                     accumulatedMs = 0L
                     displayMs = 0L
+                    poopCount = 0
+                    waterTotalLiters = 0.0
+                    coffeeCounts.clear()
+                    boostCounts.clear()
                 },
                 enabled = displayMs > 0
             ) {
@@ -213,14 +238,13 @@ fun StopwatchScreen(
             }
         }
 
-        // Quick actions (above History)
+        // Quick actions
         Text(
             text = "Quick actions",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
 
-        // 2x2 grid (same size, same shape)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -263,9 +287,7 @@ fun StopwatchScreen(
             )
         }
 
-        // -----------------------------
         // History
-        // -----------------------------
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -280,12 +302,8 @@ fun StopwatchScreen(
         if (sessions.isEmpty()) {
             Text("No sessions yet")
         } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(
-                    sessions.sortedByDescending { it.createdAtEpochMs }
-                ) { s ->
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(sessions.sortedByDescending { it.createdAtEpochMs }) { s ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
@@ -304,28 +322,52 @@ fun StopwatchScreen(
         }
     }
 
+    // -----------------------------
+    // SUCCESS SUMMARY DIALOG
+    // -----------------------------
+    if (showSummary) {
+        AlertDialog(
+            onDismissRequest = { showSummary = false },
+            title = { Text("Session Saved!") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Time studied: ${formatDuration(lastSavedTime)}")
+                    Text("☕ Coffee: $lastSavedCoffee cups")
+                    Text("💧 Water: ${formatLiters(lastSavedWater)}")
+                    Text("⚡ Boost: $lastSavedBoost drinks")
+                    Text("💩 Poop: $lastSavedPoop times")
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showSummary = false }) {
+                    Text("Keep studying")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showSummary = false
+                    onBack()
+                }) {
+                    Text("Go to Exams")
+                }
+            }
+        )
+    }
+
+    // --- Poop Dialog ---
     if (showPoopConfirm) {
         AlertDialog(
             onDismissRequest = { showPoopConfirm = false },
             title = { Text("Confirm") },
             text = { Text("Are you sure you want to add 1 poop?") },
             confirmButton = {
-                Button(
-                    onClick = {
-                        poopCount += 1
-                        showPoopConfirm = false
-                    }
-                ) { Text("Add") }
+                Button(onClick = { poopCount += 1; showPoopConfirm = false }) { Text("Add") }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showPoopConfirm = false }) { Text("Cancel") }
-            }
+            dismissButton = { OutlinedButton(onClick = { showPoopConfirm = false }) { Text("Cancel") } }
         )
     }
 
-    // -----------------------------
-    // Coffee dialog (choose type)
-    // -----------------------------
+    // --- Coffee Dialog ---
     if (showCoffeeDialog) {
         AlertDialog(
             onDismissRequest = { showCoffeeDialog = false },
@@ -333,41 +375,27 @@ fun StopwatchScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     CoffeeType.entries.forEach { type ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (selectedCoffeeType == type),
-                                onClick = { selectedCoffeeType = type }
-                            )
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = (selectedCoffeeType == type), onClick = { selectedCoffeeType = type })
                             Spacer(Modifier.width(8.dp))
                             Text(type.label)
                             Spacer(Modifier.weight(1f))
-                            val count = coffeeCounts[type] ?: 0
-                            Text(count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text((coffeeCounts[type] ?: 0).toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val current = coffeeCounts[selectedCoffeeType] ?: 0
-                        coffeeCounts[selectedCoffeeType] = current + 1
-                        showCoffeeDialog = false
-                    }
-                ) { Text("Add") }
+                Button(onClick = {
+                    coffeeCounts[selectedCoffeeType] = (coffeeCounts[selectedCoffeeType] ?: 0) + 1
+                    showCoffeeDialog = false
+                }) { Text("Add") }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showCoffeeDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { OutlinedButton(onClick = { showCoffeeDialog = false }) { Text("Cancel") } }
         )
     }
 
-    // -----------------------------
-    // Boost dialog (choose drink)
-    // -----------------------------
+    // --- Boost Dialog ---
     if (showBoostDialog) {
         AlertDialog(
             onDismissRequest = { showBoostDialog = false },
@@ -375,41 +403,27 @@ fun StopwatchScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     BoostType.entries.forEach { type ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (selectedBoostType == type),
-                                onClick = { selectedBoostType = type }
-                            )
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = (selectedBoostType == type), onClick = { selectedBoostType = type })
                             Spacer(Modifier.width(8.dp))
                             Text(type.label)
                             Spacer(Modifier.weight(1f))
-                            val count = boostCounts[type] ?: 0
-                            Text(count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text((boostCounts[type] ?: 0).toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val current = boostCounts[selectedBoostType] ?: 0
-                        boostCounts[selectedBoostType] = current + 1
-                        showBoostDialog = false
-                    }
-                ) { Text("Add") }
+                Button(onClick = {
+                    boostCounts[selectedBoostType] = (boostCounts[selectedBoostType] ?: 0) + 1
+                    showBoostDialog = false
+                }) { Text("Add") }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showBoostDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { OutlinedButton(onClick = { showBoostDialog = false }) { Text("Cancel") } }
         )
     }
 
-    // -----------------------------
-    // Water dialog (input liters)
-    // -----------------------------
+    // --- Water Dialog ---
     if (showWaterDialog) {
         AlertDialog(
             onDismissRequest = { showWaterDialog = false },
@@ -418,57 +432,34 @@ fun StopwatchScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = waterInput,
-                        onValueChange = {
-                            waterInput = it
-                            waterError = null
-                        },
+                        onValueChange = { waterInput = it; waterError = null },
                         label = { Text("Liters (e.g. 0.5)") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     if (waterError != null) {
-                        Text(
-                            text = waterError!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text(text = waterError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val parsed = waterInput.trim().replace(",", ".").toDoubleOrNull()
-                        if (parsed == null || parsed <= 0.0) {
-                            waterError = "Please enter a valid number > 0"
-                            return@Button
-                        }
-                        waterTotalLiters += parsed
-                        showWaterDialog = false
-
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Added ${formatLiters(parsed)}")
-                        }
-                    }
-                ) { Text("Add") }
+                Button(onClick = {
+                    val parsed = waterInput.trim().replace(",", ".").toDoubleOrNull()
+                    if (parsed == null || parsed <= 0.0) { waterError = "Please enter a valid number > 0"; return@Button }
+                    waterTotalLiters += parsed
+                    showWaterDialog = false
+                    scope.launch { snackbarHostState.showSnackbar("Added ${formatLiters(parsed)}") }
+                }) { Text("Add") }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showWaterDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { OutlinedButton(onClick = { showWaterDialog = false }) { Text("Cancel") } }
         )
     }
-
 }
 
 // -----------------------------
 // Helpers
 // -----------------------------
 
-
-/**
- * Fixed icon size + fixed icon slot:
- * every button icon looks identical in size, shape, and alignment.
- */
 @Composable
 private fun QuickActionButton(
     modifier: Modifier = Modifier,
@@ -478,43 +469,20 @@ private fun QuickActionButton(
     subtitle: String?,
     onClick: () -> Unit
 ) {
-    val iconBoxSize = 24.dp
-    val iconSize = 16.dp
-    val emojiSizeSp = 16.sp
-
     FilledTonalButton(
         modifier = modifier.height(56.dp),
         onClick = onClick,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier.size(iconBoxSize),
-                contentAlignment = Alignment.Center
-            ) {
-                when {
-                    icon != null -> Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        modifier = Modifier.size(iconSize)
-                    )
-                    !emoji.isNullOrBlank() -> Text(
-                        text = emoji,
-                        style = TextStyle(fontSize = emojiSizeSp, lineHeight = emojiSizeSp)
-                    )
-                }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                if (icon != null) Icon(imageVector = icon, contentDescription = title, modifier = Modifier.size(16.dp))
+                else if (!emoji.isNullOrBlank()) Text(text = emoji, style = TextStyle(fontSize = 16.sp, lineHeight = 16.sp))
             }
-
             Spacer(Modifier.width(10.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                if (!subtitle.isNullOrBlank()) {
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                }
+                if (!subtitle.isNullOrBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
             }
         }
     }
@@ -525,17 +493,13 @@ private fun formatDuration(ms: Long): String {
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    val centis = (ms % 1000) / 10
-    return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds, centis)
+    return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
 }
 
 private fun formatDateTime(epochMs: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    return formatter.format(Date(epochMs))
+    return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(epochMs))
 }
+
 private fun formatLiters(liters: Double): String {
-
-    // 0.5 -> "0.5 L", 1.0 -> "1.0 L"
-
     return String.format(Locale.getDefault(), "%.1f L", liters)
 }

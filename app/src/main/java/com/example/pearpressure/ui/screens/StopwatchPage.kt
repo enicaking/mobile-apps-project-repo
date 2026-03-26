@@ -22,9 +22,11 @@ fun StopwatchPage(
     viewModel: MainViewModel,
     subjectName: String,
     examTitle: String,
-    examId: String, // ✅ ADD THIS
+    examId: String, //
     endsAtEpochMs: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit //without {} so that mandatory
+    //onback is a callback function of when you are done, do this,
+    //here, when user clicks finish means done with study session, so goes back to stopwatch screen
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
     val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
@@ -78,7 +80,8 @@ fun StopwatchPage(
             viewModel = viewModel,
             examId = examId,
             showTitle = false,
-            bottomInfoText = infoText
+            bottomInfoText = infoText,
+            onBack = onBack
         )
     }
 }

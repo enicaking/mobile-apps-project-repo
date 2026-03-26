@@ -51,6 +51,11 @@ data class Session(
     var ownerId: String = "",
     var examId: String = "",
     var durationMs: Long = 0L,
-    var createdAtEpochMs: Long = 0L
+    var createdAtEpochMs: Long = 0L,
+    //counters for rankings and statistics
+    var waterCount: Int = 0,      // ml de agua
+    var coffeeCount: Int = 0,     // cantidad de cafés
+    var energyDrinkCount: Int = 0, // cantidad de bebidas energéticas
+    var bathroomBreaks: Int = 0    // cantidad de veces al baño (poop)
 )
 

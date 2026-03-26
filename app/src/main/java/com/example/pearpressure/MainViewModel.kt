@@ -369,20 +369,7 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    // Function to save session
-    fun saveSession(examId: String, durationMs: Long) = viewModelScope.launch {
-        val userId = authRepo.currentUser?.uid ?: return@launch
 
-        val session = Session(
-            ownerId = userId,
-            examId = examId,
-            durationMs = durationMs,
-            createdAtEpochMs = System.currentTimeMillis()
-        )
-
-        repo.addSession(session)
-            .onFailure { _error.value = it.message }
-    }
 
     override fun onCleared() {
         subjectsListeners.forEach { it.remove() }
@@ -481,26 +468,39 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    // Función requerida por ExamsScreen en TestApp ---
+    fun saveExamResults(examId: String, expected: Double?, sleep: Double?, actual: Double?) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+        repo.updateExamStats(examId, userId, expected, sleep, actual)
+            .onFailure { _error.value = it.message }
+    }
 
-    //
-    // ── Exam Results Logic (Step 1 & Step 2)
-    fun saveExamResults(
+    //FUNCTION TO SAVE SESSION
+    fun saveSession(
         examId: String,
-        expected: Double?,
-        sleep: Double?,
-        actual: Double?
+        durationMs: Long,
+        water: Int = 0,
+        coffee: Int = 0,
+        energy: Int = 0,
+        bathroom: Int = 0
     ) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
 
-        repo.updateExamStats(
+        val session = Session(
+            ownerId = userId,
             examId = examId,
-            userId = userId,
-            expected = expected,
-            sleep = sleep,
-            actual = actual
-        ).onFailure {
-            _error.value = "Failed to save stats: ${it.message}"
-        }
+            durationMs = durationMs,
+            createdAtEpochMs = System.currentTimeMillis(),
+            waterCount = water,
+            coffeeCount = coffee,
+            energyDrinkCount = energy,
+            bathroomBreaks = bathroom
+        )
+
+        repo.addSession(session).onFailure { _error.value = it.message }
+
+        // También actualizamos el tiempo total para que suba en el Ranking
+        repo.updateUserTotalStudyTime(userId, durationMs).onFailure { _error.value = it.message }
     }
 
 }
