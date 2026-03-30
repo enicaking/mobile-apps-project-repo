@@ -94,17 +94,17 @@ fun ExamsScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
-            Button(
-                onClick = {
-                    if (isOwner) {
+
+
+            if (isOwner) {
+                Button(
+                    onClick = {
                         showDialog = true
                         onAddMember()
-                    } else {
-                        onLeaveSubject()
                     }
+                ) {
+                    Text("Add Member")
                 }
-            ) {
-                Text(if (isOwner) "Add Member" else "Leave Subject")
             }
         }
 
@@ -140,12 +140,11 @@ fun ExamsScreen(
                     ExamCard(
                         exam = exam,
                         nowMs = nowMs,
-                        currentUserId = currentUserId, // ✅ PASSING ID TO CARD
+                        currentUserId = currentUserId, // PASSING ID TO CARD
                         onOpenInProgressExam = onOpenInProgressExam,
                         onOpenFinishedExam = {
-                            // ✅ FIX: Removed the "2-day" check that was blocking the dialog
+                            //FIX: Removed the "2-day" check that was blocking the dialog
                             examForResults = exam
-                            // Reset inputs or pre-fill if you have existing data
                             expectedInput = ""
                             sleepInput = ""
                             actualInput = ""
@@ -275,6 +274,7 @@ fun ExamsScreen(
         )
     }
 
+    // MODIFIED: Post-Exam Results Dialog with Sequential Phase Logic
     examForResults?.let { exam ->
         val hasExpected = exam.expectedGrades.containsKey(currentUserId)
         val hasSleep = exam.sleepHours.containsKey(currentUserId)
@@ -332,14 +332,12 @@ fun ExamsScreen(
                 } else {
                     Button(onClick = { examForResults = null }) { Text("Got it") }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { examForResults = null }) { Text("Close") }
             }
+            // Removed dismissButton ("Close") so they have to interact with Save/Got it
         )
     }
 
-    // FIXED: Corrected the structure of the Delete Dialog
+    // Confirmation dialog for deleting an exam
     if (examToDelete != null) {
         val exam = examToDelete!!
         AlertDialog(
@@ -379,7 +377,6 @@ private fun ExamCard(
     val hasExpected = exam.expectedGrades.containsKey(currentUserId)
     val hasReal = exam.actualGrades.containsKey(currentUserId)
 
-    // NO MORE \n - Single line status
     val statusText = when {
         !isPastDeadline -> "In Progress"
         !hasExpected -> "Waiting for Expected Grade"
