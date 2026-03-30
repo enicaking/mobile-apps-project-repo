@@ -78,10 +78,10 @@ fun StopwatchPage(
         // Cronómetro + texto debajo del cronómetro
         StopwatchScreen(
             viewModel = viewModel,
-            examId = examId,
+            examId = examId, // This allows the timer to save to the specific exam
             showTitle = false,
             bottomInfoText = infoText,
-            onBack = onBack
+            onBack = onBack // When they finish, they go back to the Exams screen
         )
     }
 }

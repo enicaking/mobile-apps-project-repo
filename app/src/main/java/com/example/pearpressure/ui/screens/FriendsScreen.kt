@@ -16,19 +16,18 @@ import com.example.pearpressure.IncomingFriendRequestUi
 import com.example.pearpressure.OutgoingFriendRequestUi
 
 @Composable
-fun FriendsScreen() {
-    val vm: MainViewModel = viewModel()
+fun FriendsScreen(viewModel: MainViewModel = viewModel()) { // CHANGED: Added parameter & renamed 'vm' to 'viewModel'
 
-    val friends by vm.friends.collectAsState()
-    val incoming by vm.incomingRequests.collectAsState()
-    val outgoing by vm.outgoingRequests.collectAsState()
-    val buddies by vm.studyBuddies.collectAsState()
+    val friends by viewModel.friends.collectAsState()
+    val incoming by viewModel.incomingRequests.collectAsState()
+    val outgoing by viewModel.outgoingRequests.collectAsState()
+    val buddies by viewModel.studyBuddies.collectAsState()
 
-    val searchError by vm.friendSearchError.collectAsState()
-    val searchResult by vm.friendSearchResult.collectAsState()
+    val searchError by viewModel.friendSearchError.collectAsState()
+    val searchResult by viewModel.friendSearchResult.collectAsState()
 
     var email by remember { mutableStateOf("") }
-    val myUid = vm.getCurrentUserId()
+    val myUid = viewModel.getCurrentUserId()
     val friendUids = remember(friends) { friends.map { it.uid }.toSet() }
 
     Scaffold { padding ->
@@ -47,7 +46,7 @@ fun FriendsScreen() {
                 modifier = Modifier.fillMaxWidth()
             )
             Button(
-                onClick = { vm.searchUserByEmail(email) },
+                onClick = { viewModel.searchUserByEmail(email) },
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) { Text("Search") }
 
@@ -62,7 +61,7 @@ fun FriendsScreen() {
                     user = u,
                     trailing = {
                         OutlinedButton(
-                            onClick = { vm.sendFriendRequest(u.uid) },
+                            onClick = { viewModel.sendFriendRequest(u.uid) },
                             enabled = canAdd
                         ) { Text(if (u.uid == myUid) "This is you" else if (!canAdd) "Added" else "Add") }
                     }
@@ -79,8 +78,8 @@ fun FriendsScreen() {
                 incoming.forEach { item ->
                     RequestCardIncoming(
                         item = item,
-                        onAccept = { vm.acceptRequest(item.request) },
-                        onDecline = { vm.declineRequest(item.request) }
+                        onAccept = { viewModel.acceptRequest(item.request) },
+                        onDecline = { viewModel.declineRequest(item.request) }
                     )
                 }
             }
@@ -111,7 +110,7 @@ fun FriendsScreen() {
                             title = null,
                             user = u,
                             trailing = {
-                                TextButton(onClick = { vm.removeFriend(u.uid) }) { Text("Remove") }
+                                TextButton(onClick = { viewModel.removeFriend(u.uid) }) { Text("Remove") }
                             }
                         )
                     }

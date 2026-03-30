@@ -46,7 +46,6 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
         }
 
         AuthScreen.APP -> {
-            val tabs = listOf(MainTab.HOME, MainTab.RANKING, MainTab.FRIENDS, MainTab.PROFILE)
             var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
 
             Scaffold(
@@ -70,8 +69,8 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                 ) {
                     when (selectedTab) {
                         MainTab.HOME -> HomeFlow(viewModel)
-                        MainTab.RANKING -> RankingScreen()
-                        MainTab.FRIENDS -> FriendsScreen()
+                        MainTab.RANKING -> RankingScreen(viewModel = viewModel)
+                        MainTab.FRIENDS -> FriendsScreen(viewModel = viewModel)
                         MainTab.PROFILE -> ProfileScreen(
                             viewModel = viewModel,
                             onLogout = { authScreen = AuthScreen.LOGIN }
@@ -103,9 +102,11 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     viewModel.loadExams(subjectId)
                     screen = HomeScreen.EXAMS
                 },
+                // Action handles delete/leave logic from VM
                 onActionSubject = { subject ->
                     viewModel.deleteOrLeaveSubject(subject)
                 },
+                // FIXED: Passing the update logic to clear red errors
                 onUpdateSubject = { subjectId, newName ->
                     viewModel.updateSubjectName(subjectId, newName)
                 }
@@ -135,13 +136,11 @@ private fun HomeFlow(viewModel: MainViewModel) {
                 },
 
                 onUserSelected = { user ->
-                    if (!subject.members.contains(user.uid)) {
-                        viewModel.addMemberToSubject(subject.id, user.uid)
-                    }
+                    viewModel.addMemberToSubject(subject.id, user.uid)
                 },
 
                 onAddMember = {
-                    viewModel.searchFriends("")
+                    viewModel.searchFriends("") // Reset search when opening member dialog
                 },
 
                 onLeaveSubject = {
@@ -157,6 +156,7 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     )
                 },
 
+                // FIXED: Passing update logic to clear red errors
                 onUpdateExam = { examId, title, endsAtMs ->
                     viewModel.updateExam(examId, title, endsAtMs)
                 },
@@ -172,6 +172,7 @@ private fun HomeFlow(viewModel: MainViewModel) {
 
                 onBack = { screen = HomeScreen.SUBJECTS },
 
+                // Phase 3 Stats recording
                 onSaveResults = { examId, expected, sleep, actual ->
                     viewModel.saveExamResults(examId, expected, sleep, actual)
                 }

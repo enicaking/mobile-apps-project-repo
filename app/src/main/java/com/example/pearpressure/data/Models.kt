@@ -58,4 +58,15 @@ data class Session(
     var energyDrinkCount: Int = 0, // cantidad de bebidas energéticas
     var bathroomBreaks: Int = 0    // cantidad de veces al baño (poop)
 )
-
+// UI-only model for the Ranking Screen
+data class RankingEntryUi(
+    val uid: String,
+    val userName: String,
+    val totalStudyTimeMs: Long,
+    val avgAccuracy: Double = 0.0, // (Actual - Expected) difference
+    val efficiencyScore: Double = 0.0, // Grade / Hours
+    val totalWater: Int = 0,
+    val totalCoffee: Int = 0,
+    val totalEnergy: Int = 0,
+    val totalBathroom: Int = 0
+)

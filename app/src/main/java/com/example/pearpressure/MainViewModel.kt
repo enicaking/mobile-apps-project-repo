@@ -8,10 +8,25 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+
+enum class RankingScope(val label: String) {
+    TOTAL("All Time"),
+    WEEKLY("This Week")
+}
 data class RankingEntryUi(
     val uid: String,
     val userName: String,
-    val totalStudyTimeMs: Long
+    val totalStudyTimeMs: Long,
+    val avgAccuracy: Double = 0.0,      // Margin of error
+    val efficiencyScore: Double = 0.0, // Grade / Hour
+    val totalWater: Int = 0,
+    val totalCoffee: Int = 0,
+    val totalEnergy: Int = 0,
+    val totalBathroom: Int = 0,
+    //just general average sleep, expected and real grades:
+    val lastSleep: Double = 0.0,
+    val lastExpected: Double = 0.0,
+    val lastActual: Double = 0.0
 )
 
 data class IncomingFriendRequestUi(
@@ -115,9 +130,10 @@ class MainViewModel : ViewModel() {
                 _selectedRankingSubjectId.value = updatedList.first().id
             }
 
-            // derived lists
             refreshStudyBuddiesFromSubjects()
-            loadRanking()
+
+            //Pass default arguments to match the  function signature
+            loadRanking(examId = null, scope = RankingScope.TOTAL)
         }
 
         // friends + requests
@@ -285,36 +301,9 @@ class MainViewModel : ViewModel() {
 
     fun selectRankingSubject(subjectId: String) {
         _selectedRankingSubjectId.value = subjectId
-        loadRanking()
-    }
-
-    fun loadRanking() = viewModelScope.launch {
-        val subjectId = _selectedRankingSubjectId.value ?: run {
-            _rankingEntries.value = emptyList(); return@launch
-        }
-
-        val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: run {
-            _rankingEntries.value = emptyList(); return@launch
-        }
-
-        val memberUids = (listOf(subject.ownerId) + subject.members)
-            .filter { it.isNotBlank() }
-            .distinct()
-
-        repo.getUserProfilesByIds(memberUids)
-            .onSuccess { profiles ->
-                _rankingEntries.value = profiles
-                    .map {
-                        val display = when {
-                            it.fullName.isNotBlank() -> it.fullName
-                            it.email.isNotBlank() -> it.email
-                            else -> it.uid
-                        }
-                        RankingEntryUi(it.uid, display, it.totalStudyTime)
-                    }
-                    .sortedByDescending { it.totalStudyTimeMs }
-            }
-            .onFailure { _error.value = it.message }
+        // this line fetches the exams so the dropdown has data immediately
+        loadExams(subjectId)
+        loadRanking(examId = null, scope = RankingScope.TOTAL)
     }
 
     // ── Study buddies (from subjects)
@@ -543,7 +532,81 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+
+    fun loadRanking(
+        examId: String? = null,
+        scope: RankingScope = RankingScope.TOTAL
+    ) = viewModelScope.launch {
+        val subjectId = _selectedRankingSubjectId.value ?: run {
+            _rankingEntries.value = emptyList(); return@launch
+        }
+
+        val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: run {
+            _rankingEntries.value = emptyList(); return@launch
+        }
+
+        // 1. Get all exams for this subject
+        val exams = repo.getExamsBySubjectSync(subjectId)
+
+        // 2. FILTER SESSIONS BASED ON SELECTION
+        val examIds = if (examId != null) listOf(examId) else exams.map { it.id }
+        var sessions = repo.getSessionsForExamsSync(examIds)
+
+        // Apply Weekly Filter if selected
+        if (scope == RankingScope.WEEKLY) {
+            val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
+            sessions = sessions.filter { it.createdAtEpochMs >= oneWeekAgo }
+        }
+
+        // 3. Get all member profiles
+        val memberUids = (listOf(subject.ownerId) + subject.members)
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        repo.getUserProfilesByIds(memberUids)
+            .onSuccess { profiles ->
+                _rankingEntries.value = profiles.map { profile ->
+                    val userId = profile.uid
+                    val userSessions = sessions.filter { it.ownerId == userId }
+
+                    // --- HABITS & TIME ---
+                    val totalMs = userSessions.sumOf { it.durationMs }
+                    val water = userSessions.sumOf { it.waterCount }
+                    val coffee = userSessions.sumOf { it.coffeeCount }
+                    val energy = userSessions.sumOf { it.energyDrinkCount }
+                    val bathroom = userSessions.sumOf { it.bathroomBreaks }
+
+                    // --- ACCURACY ---
+                    val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
+                    val completedExams = relevantExams.filter {
+                        it.actualGrades.containsKey(userId) && it.expectedGrades.containsKey(userId)
+                    }
+
+                    val avgAccuracy = if (completedExams.isNotEmpty()) {
+                        completedExams.map {
+                            kotlin.math.abs((it.actualGrades[userId] ?: 0.0) - (it.expectedGrades[userId] ?: 0.0))
+                        }.average()
+                    } else 0.0
+
+                    // --- EFFICIENCY ---
+                    val totalGrade = completedExams.sumOf { it.actualGrades[userId] ?: 0.0 }
+                    val totalHours = totalMs / 3600000.0
+                    val efficiency = if (totalHours > 0) totalGrade / totalHours else 0.0
+
+                    RankingEntryUi(
+                        uid = userId,
+                        userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
+                        totalStudyTimeMs = totalMs,
+                        avgAccuracy = avgAccuracy,
+                        efficiencyScore = efficiency,
+                        totalWater = water,
+                        totalCoffee = coffee,
+                        totalEnergy = energy,
+                        totalBathroom = bathroom
+                    )
+                }
+            }
+            .onFailure { _error.value = it.message }
+    }
+
 }
-
-
-
