@@ -526,6 +526,23 @@ class MainViewModel : ViewModel() {
         loadCurrentUserProfile() // Refresh so that the totals are updated
     }
 
+    // Update logic for Subjects and Exams
+    fun updateSubjectName(subjectId: String, newName: String) = viewModelScope.launch {
+        val cleaned = newName.trim()
+        if (cleaned.isEmpty()) return@launch
+
+        repo.updateSubjectName(subjectId, cleaned)
+            .onFailure { _error.value = it.message }
+    }
+
+    fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long) = viewModelScope.launch {
+        val cleaned = newTitle.trim()
+        if (cleaned.isEmpty()) return@launch
+
+        repo.updateExam(examId, cleaned, newEndsAtMs)
+            .onFailure { _error.value = it.message }
+    }
+
 }
 
 

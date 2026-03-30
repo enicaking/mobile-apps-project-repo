@@ -400,6 +400,22 @@ class FirestoreRepository {
             .await()
     }
 
+    //being able to edit subjects and exams::
+    suspend fun updateSubjectName(subjectId: String, newName: String): Result<Unit> = try {
+        db.collection("subjects").document(subjectId)
+            .update("name", newName)
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long): Result<Unit> = try {
+        db.collection("exams").document(examId)
+            .update(
+                "title", newTitle,
+                "endsAtEpochMs", newEndsAtMs
+            )
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
+
 
 }
 

@@ -105,6 +105,9 @@ private fun HomeFlow(viewModel: MainViewModel) {
                 },
                 onActionSubject = { subject ->
                     viewModel.deleteOrLeaveSubject(subject)
+                },
+                onUpdateSubject = { subjectId, newName ->
+                    viewModel.updateSubjectName(subjectId, newName)
                 }
             )
         }
@@ -120,13 +123,12 @@ private fun HomeFlow(viewModel: MainViewModel) {
             val isOwner = subject.ownerId == currentUserId
             val friends by viewModel.filteredFriends.collectAsState()
 
-            // Now passing currentUserId and onSaveResults callback
             ExamsScreen(
                 subjectName = subject.name,
                 exams = exams,
                 isOwner = isOwner,
                 friends = friends,
-                currentUserId = currentUserId, // This fixes the red error!
+                currentUserId = currentUserId,
 
                 onSearchFriends = { query ->
                     viewModel.searchFriends(query)
@@ -155,6 +157,10 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     )
                 },
 
+                onUpdateExam = { examId, title, endsAtMs ->
+                    viewModel.updateExam(examId, title, endsAtMs)
+                },
+
                 onOpenInProgressExam = { exam ->
                     selectedExamId = exam.id
                     screen = HomeScreen.STOPWATCH
@@ -166,7 +172,6 @@ private fun HomeFlow(viewModel: MainViewModel) {
 
                 onBack = { screen = HomeScreen.SUBJECTS },
 
-                // This saves the stats to the database
                 onSaveResults = { examId, expected, sleep, actual ->
                     viewModel.saveExamResults(examId, expected, sleep, actual)
                 }

@@ -1,34 +1,15 @@
 package com.example.pearpressure.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -41,10 +22,14 @@ fun SubjectsScreen(
     currentUserId: String, // Necesario para saber si eres el owner
     onAddSubject: (String) -> Unit,
     onOpenSubject: (String) -> Unit,
-    onActionSubject: (Subject) -> Unit // Maneja borrar o salir
+    onActionSubject: (Subject) -> Unit, // Maneja borrar o salir
+    onUpdateSubject: (String, String) -> Unit // NEW: Callback to update the name
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
+
+    // NEW: State to track which subject we are editing
+    var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
 
     // Estado para controlar el diálogo de confirmación de borrado/abandono
     var subjectToAction by remember { mutableStateOf<Subject?>(null) }
@@ -55,14 +40,18 @@ fun SubjectsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "Subjects",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = { showDialog = true }) {
+            Button(onClick = {
+                subjectToEdit = null // Clear edit state for a fresh "Add"
+                newName = ""
+                showDialog = true
+            }) {
                 Text("Add Subject")
             }
         }
@@ -103,19 +92,35 @@ fun SubjectsScreen(
                                 )
                             }
 
-                            // Botón dinámico: Abre el diálogo de confirmación
-                            IconButton(onClick = { subjectToAction = s }) {
-                                Icon(
-                                    imageVector = if (isOwner)
-                                        Icons.Default.Delete
-                                    else
-                                        Icons.AutoMirrored.Filled.ExitToApp,
-                                    contentDescription = if (isOwner) "Delete" else "Leave",
-                                    tint = if (isOwner)
-                                        MaterialTheme.colorScheme.error
-                                    else
-                                        MaterialTheme.colorScheme.primary
-                                )
+                            // Button Row: Edit + Action (Delete/Leave)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isOwner) {
+                                    IconButton(onClick = {
+                                        subjectToEdit = s
+                                        newName = s.name // Pre-fill the current name
+                                        showDialog = true
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+
+                                IconButton(onClick = { subjectToAction = s }) {
+                                    Icon(
+                                        imageVector = if (isOwner)
+                                            Icons.Default.Delete
+                                        else
+                                            Icons.AutoMirrored.Filled.ExitToApp,
+                                        contentDescription = if (isOwner) "Delete" else "Leave",
+                                        tint = if (isOwner)
+                                            MaterialTheme.colorScheme.error
+                                        else
+                                            MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -124,11 +129,11 @@ fun SubjectsScreen(
         }
     }
 
-    // Diálogo para crear nueva asignatura
+    // Diálogo para crear O editar asignatura
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("New subject") },
+            title = { Text(if (subjectToEdit == null) "New subject" else "Edit subject") },
             text = {
                 TextField(
                     value = newName,
@@ -140,7 +145,11 @@ fun SubjectsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        onAddSubject(newName)
+                        if (subjectToEdit == null) {
+                            onAddSubject(newName)
+                        } else {
+                            onUpdateSubject(subjectToEdit!!.id, newName)
+                        }
                         newName = ""
                         showDialog = false
                     },

@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,16 +35,16 @@ fun ExamsScreen(
     exams: List<Exam>,
     isOwner: Boolean,
     friends: List<UserProfile>,
-    currentUserId: String, //THIS to identify who is saving
+    currentUserId: String, // ID to identify who is saving
     onSearchFriends: (String) -> Unit,
     onUserSelected: (UserProfile) -> Unit,
     onAddMember: () -> Unit,
     onLeaveSubject: () -> Unit,
     onAddExam: (title: String, endsAtMs: Long) -> Unit,
+    onUpdateExam: (examId: String, title: String, endsAtMs: Long) -> Unit, // NEW CALLBACK
     onOpenInProgressExam: (Exam) -> Unit,
     onDeleteExam: (String) -> Unit,
     onBack: () -> Unit,
-    // NEW: Callback to save the results
     onSaveResults: (examId: String, expected: Double?, sleep: Double?, actual: Double?) -> Unit = { _, _, _, _ -> }
 ) {
     val context = LocalContext.current
@@ -64,13 +65,14 @@ fun ExamsScreen(
     var newTitle by remember { mutableStateOf("") }
     var selectedEndsAtMs by remember { mutableStateOf<Long?>(null) }
 
-    // Changed to store the specific exam being edited
+    // NEW: State for editing an existing exam
+    var examToEdit by remember { mutableStateOf<Exam?>(null) }
+
     var examForResults by remember { mutableStateOf<Exam?>(null) }
     var expectedInput by remember { mutableStateOf("") }
     var sleepInput by remember { mutableStateOf("") }
     var actualInput by remember { mutableStateOf("") }
 
-    // Estado para controlar qué examen se quiere borrar y mostrar el diálogo
     var examToDelete by remember { mutableStateOf<Exam?>(null) }
 
     Column(
@@ -95,7 +97,6 @@ fun ExamsScreen(
                 modifier = Modifier.weight(1f)
             )
 
-
             if (isOwner) {
                 Button(
                     onClick = {
@@ -110,6 +111,7 @@ fun ExamsScreen(
 
         Button(
             onClick = {
+                examToEdit = null // Fresh state for new exam
                 newTitle = ""
                 selectedEndsAtMs = null
                 showCreateDialog = true
@@ -130,36 +132,41 @@ fun ExamsScreen(
                 )
             }
         } else {
-            // Clean LazyColumn (fixes the blue scrollbar bug)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
                 items(exams) { exam ->
                     ExamCard(
                         exam = exam,
                         nowMs = nowMs,
-                        currentUserId = currentUserId, // PASSING ID TO CARD
+                        currentUserId = currentUserId,
+                        isOwner = isOwner, // Pass ownership to show edit button
                         onOpenInProgressExam = onOpenInProgressExam,
                         onOpenFinishedExam = {
-                            //FIX: Removed the "2-day" check that was blocking the dialog
                             examForResults = exam
                             expectedInput = ""
                             sleepInput = ""
                             actualInput = ""
                         },
-                        onDelete = { examToDelete = exam } // Cambiado para abrir diálogo
+                        onDelete = { examToDelete = exam },
+                        onEdit = {
+                            examToEdit = exam
+                            newTitle = exam.title
+                            selectedEndsAtMs = exam.endsAtEpochMs
+                            showCreateDialog = true
+                        }
                     )
                 }
             }
         }
     }
 
+    // CREATE OR EDIT DIALOG
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("New Exam") },
+            title = { Text(if (examToEdit == null) "New Exam" else "Edit Exam") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
@@ -183,7 +190,10 @@ fun ExamsScreen(
 
                         TextButton(
                             onClick = {
-                                val now = Calendar.getInstance()
+                                val currentCal = Calendar.getInstance()
+                                // Pre-set picker to existing date if editing
+                                selectedEndsAtMs?.let { currentCal.timeInMillis = it }
+
                                 DatePickerDialog(
                                     context,
                                     { _, year, month, day ->
@@ -196,14 +206,14 @@ fun ExamsScreen(
                                                 }
                                                 selectedEndsAtMs = cal.timeInMillis
                                             },
-                                            now.get(Calendar.HOUR_OF_DAY),
-                                            now.get(Calendar.MINUTE),
+                                            currentCal.get(Calendar.HOUR_OF_DAY),
+                                            currentCal.get(Calendar.MINUTE),
                                             true
                                         ).show()
                                     },
-                                    now.get(Calendar.YEAR),
-                                    now.get(Calendar.MONTH),
-                                    now.get(Calendar.DAY_OF_MONTH)
+                                    currentCal.get(Calendar.YEAR),
+                                    currentCal.get(Calendar.MONTH),
+                                    currentCal.get(Calendar.DAY_OF_MONTH)
                                 ).show()
                             }
                         ) { Text("Set Date") }
@@ -214,7 +224,11 @@ fun ExamsScreen(
                 Button(
                     onClick = {
                         val ends = selectedEndsAtMs ?: return@Button
-                        onAddExam(newTitle, ends)
+                        if (examToEdit == null) {
+                            onAddExam(newTitle, ends)
+                        } else {
+                            onUpdateExam(examToEdit!!.id, newTitle, ends)
+                        }
                         showCreateDialog = false
                     },
                     enabled = newTitle.trim().isNotEmpty() && selectedEndsAtMs != null
@@ -226,6 +240,7 @@ fun ExamsScreen(
         )
     }
 
+    // Friend selection and result dialogs stay the same...
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -234,47 +249,23 @@ fun ExamsScreen(
                 Column {
                     OutlinedTextField(
                         value = query,
-                        onValueChange = {
-                            query = it
-                            onSearchFriends(it)
-                        },
+                        onValueChange = { query = it; onSearchFriends(it) },
                         label = { Text("Search friends") }
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     friends.forEach { user ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(user.fullName)
-
-                            TextButton(
-                                onClick = {
-                                    onUserSelected(user)
-                                    showDialog = false
-                                    query = ""
-                                }
-                            ) {
-                                Text("Add")
-                            }
+                            TextButton(onClick = { onUserSelected(user); showDialog = false; query = "" }) { Text("Add") }
                         }
                     }
                 }
             },
             confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } }
         )
     }
 
-    // MODIFIED: Post-Exam Results Dialog with Sequential Phase Logic
     examForResults?.let { exam ->
         val hasExpected = exam.expectedGrades.containsKey(currentUserId)
         val hasSleep = exam.sleepHours.containsKey(currentUserId)
@@ -282,36 +273,16 @@ fun ExamsScreen(
 
         AlertDialog(
             onDismissRequest = { examForResults = null },
-            title = {
-                Text(if (!hasExpected || !hasSleep) "Post-Exam Info" else "Final Result")
-            },
+            title = { Text(if (!hasExpected || !hasSleep) "Post-Exam Info" else "Final Result") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (!hasExpected || !hasSleep) {
                         Text("Please use numeric format (e.g., 8.5 or 7)", style = MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(
-                            value = expectedInput,
-                            onValueChange = { expectedInput = it },
-                            label = { Text("Expected Grade (0.0-10)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = sleepInput,
-                            onValueChange = { sleepInput = it },
-                            label = { Text("Sleep Hours (Night before)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     } else if (!hasReal) {
-                        Text("Stats saved! Now, enter your real grade (0.0-10):", style = MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(
-                            value = actualInput,
-                            onValueChange = { actualInput = it },
-                            label = { Text("Real Grade") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Text("Stats saved! Now, enter your real grade:", style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Real Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     } else {
                         Text("This exam is completed. Great job!")
                     }
@@ -320,24 +291,17 @@ fun ExamsScreen(
             confirmButton = {
                 if (!hasReal) {
                     Button(onClick = {
-                        if (!hasExpected || !hasSleep) {
-                            onSaveResults(exam.id, expectedInput.toDoubleOrNull(), sleepInput.toDoubleOrNull(), null)
-                        } else {
-                            onSaveResults(exam.id, null, null, actualInput.toDoubleOrNull())
-                        }
+                        if (!hasExpected || !hasSleep) onSaveResults(exam.id, expectedInput.toDoubleOrNull(), sleepInput.toDoubleOrNull(), null)
+                        else onSaveResults(exam.id, null, null, actualInput.toDoubleOrNull())
                         examForResults = null
-                    }) {
-                        Text("Save Information")
-                    }
+                    }) { Text("Save Information") }
                 } else {
                     Button(onClick = { examForResults = null }) { Text("Got it") }
                 }
             }
-            // Removed dismissButton ("Close") so they have to interact with Save/Got it
         )
     }
 
-    // Confirmation dialog for deleting an exam
     if (examToDelete != null) {
         val exam = examToDelete!!
         AlertDialog(
@@ -346,20 +310,11 @@ fun ExamsScreen(
             text = { Text("Are you sure you want to delete '${exam.title}'? This action cannot be undone.") },
             confirmButton = {
                 Button(
-                    onClick = {
-                        onDeleteExam(exam.id)
-                        examToDelete = null
-                    },
+                    onClick = { onDeleteExam(exam.id); examToDelete = null },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
+                ) { Text("Delete") }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { examToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
+            dismissButton = { OutlinedButton(onClick = { examToDelete = null }) { Text("Cancel") } }
         )
     }
 }
@@ -368,10 +323,12 @@ fun ExamsScreen(
 private fun ExamCard(
     exam: Exam,
     nowMs: Long,
-    currentUserId: String, // ADDED TO HANDLE PERSONAL STATUS
+    currentUserId: String,
+    isOwner: Boolean, // Added to show/hide Edit
     onOpenInProgressExam: (Exam) -> Unit,
     onOpenFinishedExam: () -> Unit,
-    onDelete: () -> Unit //to delete exam
+    onDelete: () -> Unit,
+    onEdit: () -> Unit // NEW Callback
 ) {
     val isPastDeadline = nowMs > exam.endsAtEpochMs
     val hasExpected = exam.expectedGrades.containsKey(currentUserId)
@@ -398,58 +355,36 @@ private fun ExamCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = exam.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Deadline: ${formatDateTime(exam.endsAtEpochMs)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = exam.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(text = "Deadline: ${formatDateTime(exam.endsAtEpochMs)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(
-                    text = statusText,
-                    isPositive = !isPastDeadline || (hasExpected && hasReal)
-                )
+                StatusPill(text = statusText, isPositive = !isPastDeadline || (hasExpected && hasReal))
 
                 Spacer(modifier = Modifier.width(8.dp))
 
+                if (isOwner) {
+                    IconButton(onClick = onEdit) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Exam", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
                 IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Exam",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Exam", tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
     }
 }
 
-
 @Composable
 private fun StatusPill(text: String, isPositive: Boolean) {
-    val bg = if (isPositive) MaterialTheme.colorScheme.primaryContainer
-    else MaterialTheme.colorScheme.errorContainer
+    val bg = if (isPositive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+    val fg = if (isPositive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
 
-    val fg = if (isPositive) MaterialTheme.colorScheme.onPrimaryContainer
-    else MaterialTheme.colorScheme.onErrorContainer
-
-    Surface(
-        color = bg,
-        contentColor = fg,
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
+    Surface(color = bg, contentColor = fg, shape = MaterialTheme.shapes.medium) {
+        Text(text = text, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
     }
 }
 
