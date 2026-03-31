@@ -582,19 +582,26 @@ class MainViewModel : ViewModel() {
 
                     // --- EXAM DATA ---
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
-                    // Only count exams where the user actually entered an actual grade
                     val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
 
-                    // We sum the points for "All Exams" view to see total Reality Gap
-                    val sumActual = completedExams.sumOf { it.actualGrades[userId] ?: 0.0 }
-                    val sumExpected = completedExams.sumOf { it.expectedGrades[userId] ?: 0.0 }
+                    // Helper to normalize grades to a scale of 10 for fair comparison
+                    fun normalize(value: Double?, max: Double): Double {
+                        val actualMax = if (max <= 0.0) 10.0 else max
+                        return ((value ?: 0.0) / actualMax) * 10.0
+                    }
+
+                    // We sum the NORMALIZED points so a 100pt exam doesn't break the ranking logic
+                    val sumActualNormalized = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
+                    val sumExpectedNormalized = completedExams.sumOf { normalize(it.expectedGrades[userId], it.maxGrade) }
+
                     val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
 
                     // --- STUDY EFFICIENCY ---
                     val totalHours = totalMs / 3600000.0
-                    // Safety check: Only calculate if studied more than 10 seconds (0.0027 hours)
-                    // This allows low time to show up while blocking 0-second errors.
-                    val efficiency = if (totalHours > 0.0027) sumActual / totalHours else 0.0
+
+                    // Efficiency is now (Normalized Points / Hours) for a fair leaderboard
+                    val efficiency = if (totalHours > 0.0027) sumActualNormalized / totalHours else 0.0
+
                     RankingEntryUi(
                         uid = userId,
                         userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
@@ -606,8 +613,8 @@ class MainViewModel : ViewModel() {
                         totalEnergy = energy,
                         totalBathroom = bathroom,
                         avgSleep = avgSleep,
-                        avgActualGrade = sumActual, // This is now a SUM
-                        avgExpectedGrade = sumExpected // This is now a SUM
+                        avgActualGrade = sumActualNormalized, // Normalized SUM
+                        avgExpectedGrade = sumExpectedNormalized // Normalized SUM
                     )
                 }
             }

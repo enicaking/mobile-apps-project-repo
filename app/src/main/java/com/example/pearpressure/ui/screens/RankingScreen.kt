@@ -201,7 +201,8 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                             rank = index + 1,
                             entry = entry,
                             category = selectedCategory,
-                            maxGrade = currentSelectedExam?.maxGrade ?: 10.0
+                            maxGrade = currentSelectedExam?.maxGrade ?: 10.0,
+                            isAllExams = selectedExamId == null // <--- ADD THIS
                         )
                     }
                 }
@@ -234,12 +235,32 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
 }
 
 @Composable
-private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCategory, maxGrade: Double) {
+private fun RankingRow(
+    rank: Int,
+    entry: RankingEntryUi,
+    category: RankingCategory,
+    maxGrade: Double,
+    isAllExams: Boolean // Added this to handle the "10-scale vs Real-scale" display
+) {
+    // Determine Podium Colors
+    val rowColor = when (rank) {
+        1 -> Color(0xFFFFD700).copy(alpha = 0.15f) // Gold
+        2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f) // Silver
+        3 -> Color(0xFFCD7F32).copy(alpha = 0.15f) // Bronze
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    val borderColor = when (rank) {
+        1 -> Color(0xFFFFD700)
+        2 -> Color(0xFFC0C0C0)
+        3 -> Color(0xFFCD7F32)
+        else -> Color.Transparent
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (rank == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = rowColor),
+        border = if (rank <= 3) androidx.compose.foundation.BorderStroke(2.dp, borderColor) else null
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -249,7 +270,9 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
                 text = "#$rank",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
-                modifier = Modifier.width(45.dp)
+                modifier = Modifier.width(45.dp),
+                // Make the rank number color match the medal for top 3
+                color = if (rank <= 3) borderColor else MaterialTheme.colorScheme.onSurface
             )
 
             Column(modifier = Modifier.weight(1f)) {
@@ -258,24 +281,41 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
             }
 
             // --- DATA DISPLAY ---
-            // --- REALITY GAP MATH ---
             val realityGapValue = entry.avgActualGrade - entry.avgExpectedGrade
 
             val displayValue = when (category) {
                 RankingCategory.HARD_WORK -> formatMsWithSeconds(entry.totalStudyTimeMs)
+
                 RankingCategory.REALITY_GAP -> {
                     val sign = if (realityGapValue > 0) "+" else ""
-                    "$sign${"%.1f".format(realityGapValue)} ${category.unit}"
+                    // If it's a specific exam, we scale the gap back to actual points
+                    val displayGap = if (isAllExams) realityGapValue else realityGapValue * (maxGrade / 10.0)
+                    "$sign${"%.1f".format(displayGap)} ${category.unit}"
                 }
+
                 RankingCategory.STUDY_EFFICIENCY, RankingCategory.EFFICIENCY -> {
                     "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
                 }
 
-                // FIXED: Displays total points for current selection
-                RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}"
-                RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}"
+                RankingCategory.GRADE_ACTUAL -> {
+                    if (isAllExams) {
+                        "${"%.1f".format(entry.avgActualGrade)} pts" // Global normalized sum
+                    } else {
+                        // Converts the 10-scale back to the exam's real scale (e.g. 18.0/20.0)
+                        "${"%.1f".format(entry.avgActualGrade * (maxGrade / 10.0))}/$maxGrade"
+                    }
+                }
+
+                RankingCategory.GRADE_EXPECTED -> {
+                    if (isAllExams) {
+                        "${"%.1f".format(entry.avgExpectedGrade)} pts"
+                    } else {
+                        "${"%.1f".format(entry.avgExpectedGrade * (maxGrade / 10.0))}/$maxGrade"
+                    }
+                }
 
                 RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
+
                 else -> {
                     val count = when(category) {
                         RankingCategory.HABIT_WATER -> entry.totalWater
@@ -288,8 +328,8 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
             }
 
             val valueColor = when {
-                category == RankingCategory.REALITY_GAP && realityGapValue > 0 -> Color(0xFF4CAF50) // Positive Green
-                category == RankingCategory.REALITY_GAP && realityGapValue < 0 -> Color(0xFFF44336) // Negative Red
+                category == RankingCategory.REALITY_GAP && realityGapValue > 0 -> Color(0xFF4CAF50)
+                category == RankingCategory.REALITY_GAP && realityGapValue < 0 -> Color(0xFFF44336)
                 else -> MaterialTheme.colorScheme.primary
             }
 
