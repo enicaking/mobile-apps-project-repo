@@ -536,7 +536,7 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-
+    // ALL THE RANKING LOGIC HERE
     fun loadRanking(
         examId: String? = null,
         scope: RankingScope = RankingScope.TOTAL
@@ -580,50 +580,34 @@ class MainViewModel : ViewModel() {
                     val energy = userSessions.sumOf { it.energyDrinkCount }
                     val bathroom = userSessions.sumOf { it.bathroomBreaks }
 
-                    // --- EXAM DATA (Grades & Sleep) ---
+                    // --- EXAM DATA ---
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
+                    // Only count exams where the user actually entered an actual grade
                     val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
 
-                    // Point 1: Normalize grades based on maxGrade (Converted to a scale of 10 for ranking)
-                    fun normalize(value: Double?, max: Double): Double {
-                        val actualMax = if (max <= 0.0) 10.0 else max
-                        return ((value ?: 0.0) / actualMax) * 10.0
-                    }
-
-                    val avgAccuracy = if (completedExams.isNotEmpty()) {
-                        completedExams.map {
-                            val normActual = normalize(it.actualGrades[userId], it.maxGrade)
-                            val normExpected = normalize(it.expectedGrades[userId], it.maxGrade)
-                            kotlin.math.abs(normActual - normExpected)
-                        }.average()
-                    } else 0.0
-
-                    // Sleep and Direct Grades
+                    // We sum the points for "All Exams" view to see total Reality Gap
+                    val sumActual = completedExams.sumOf { it.actualGrades[userId] ?: 0.0 }
+                    val sumExpected = completedExams.sumOf { it.expectedGrades[userId] ?: 0.0 }
                     val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
 
-                    // Show grades on a scale of 10 in the ranking for consistency
-                    val avgActual = if (completedExams.isNotEmpty()) completedExams.map { normalize(it.actualGrades[userId], it.maxGrade) }.average() else 0.0
-                    val avgExpected = if (completedExams.isNotEmpty()) completedExams.map { normalize(it.expectedGrades[userId], it.maxGrade) }.average() else 0.0
-
-                    // --- EFFICIENCY ---
-                    // We use normalized points per hour for a fair ranking
-                    val totalNormalizedPoints = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
+                    // --- STUDY EFFICIENCY ---
                     val totalHours = totalMs / 3600000.0
-                    val efficiency = if (totalHours > 0.0) totalNormalizedPoints / totalHours else 0.0
-
+                    // Safety check: Only calculate if studied more than 10 seconds (0.0027 hours)
+                    // This allows low time to show up while blocking 0-second errors.
+                    val efficiency = if (totalHours > 0.0027) sumActual / totalHours else 0.0
                     RankingEntryUi(
                         uid = userId,
                         userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
                         totalStudyTimeMs = totalMs,
-                        avgAccuracy = avgAccuracy,
+                        avgAccuracy = 0.0, // Deprecated in favor of Reality Gap
                         efficiencyScore = efficiency,
                         totalWater = water,
                         totalCoffee = coffee,
                         totalEnergy = energy,
                         totalBathroom = bathroom,
                         avgSleep = avgSleep,
-                        avgActualGrade = avgActual,
-                        avgExpectedGrade = avgExpected
+                        avgActualGrade = sumActual, // This is now a SUM
+                        avgExpectedGrade = sumExpected // This is now a SUM
                     )
                 }
             }

@@ -13,15 +13,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.RankingEntryUi
-
-// 1. Time Scope: Total vs Weekly
-import com.example.pearpressure.RankingScope //GETTING IT FROM MAINVIEWMODEL
+import com.example.pearpressure.RankingScope
 
 // 2. Ranking Types (Dropdown)
 enum class RankingCategory(val label: String, val unit: String) {
     HARD_WORK("Hard Work (Time)", ""),
     REALITY_GAP("Reality Gap", "pts"),
-    EFFICIENCY("Efficiency", "pts/hr"),
+    STUDY_EFFICIENCY("Study Efficiency", "pts/hr"), // UPDATED NAME
+    EFFICIENCY("Efficiency", "pts/hr"), // Keep for compatibility
     HABIT_WATER("Water Intake", "glasses"),
     HABIT_COFFEE("Coffee Consumed", "cups"),
     HABIT_ENERGY("Energy Drinks", "cans"),
@@ -176,9 +175,8 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
             val sortedEntries = remember(entries, selectedCategory) {
                 when (selectedCategory) {
                     RankingCategory.HARD_WORK -> entries.sortedByDescending { it.totalStudyTimeMs }
-                    // Changed to Reality Gap Sum Sorting
                     RankingCategory.REALITY_GAP -> entries.sortedByDescending { it.avgActualGrade - it.avgExpectedGrade }
-                    RankingCategory.EFFICIENCY -> entries.sortedByDescending { it.efficiencyScore }
+                    RankingCategory.STUDY_EFFICIENCY, RankingCategory.EFFICIENCY -> entries.sortedByDescending { it.efficiencyScore }
                     RankingCategory.HABIT_WATER -> entries.sortedByDescending { it.totalWater }
                     RankingCategory.HABIT_COFFEE -> entries.sortedByDescending { it.totalCoffee }
                     RankingCategory.HABIT_ENERGY -> entries.sortedByDescending { it.totalEnergy }
@@ -203,7 +201,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                             rank = index + 1,
                             entry = entry,
                             category = selectedCategory,
-                            // Pass the maxGrade from current exam if it exists, otherwise assume 10.0 for averages
                             maxGrade = currentSelectedExam?.maxGrade ?: 10.0
                         )
                     }
@@ -270,11 +267,13 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
                     val sign = if (realityGapValue > 0) "+" else ""
                     "$sign${"%.1f".format(realityGapValue)} ${category.unit}"
                 }
-                RankingCategory.EFFICIENCY -> "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
+                RankingCategory.STUDY_EFFICIENCY, RankingCategory.EFFICIENCY -> {
+                    "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
+                }
 
-                // FIXED: Now displays with the correct dynamic scale (e.g., 18.0/20.0)
-                RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}/${"%.1f".format(maxGrade)}"
-                RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}/${"%.1f".format(maxGrade)}"
+                // FIXED: Displays total points for current selection
+                RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}"
+                RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}"
 
                 RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
                 else -> {
