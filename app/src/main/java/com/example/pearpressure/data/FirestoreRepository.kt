@@ -374,22 +374,21 @@ class FirestoreRepository {
 
     suspend fun updateExamStats(
         examId: String,
-        userId: String, // We MUST pass the current user's ID here
+        userId: String,
         expected: Double?,
         sleep: Double?,
         actual: Double?
     ): Result<Unit> = runCatching {
+        val docRef = db.collection("exams").document(examId)
         val updates = mutableMapOf<String, Any>()
 
-        // Using dot notation "field.key" tells Firestore to update ONLY that
-        // specific user's entry inside the Map without deleting others!
-        expected?.let { updates["expectedGrades.$userId"] = it }
-        sleep?.let { updates["sleepHours.$userId"] = it }
-        actual?.let { updates["actualGrades.$userId"] = it }
+        // If a value is provided, we set it.
+        // If it is NULL, we use FieldValue.delete() to remove that user's entry entirely.
+        updates["expectedGrades.$userId"] = expected ?: com.google.firebase.firestore.FieldValue.delete()
+        updates["sleepHours.$userId"] = sleep ?: com.google.firebase.firestore.FieldValue.delete()
+        updates["actualGrades.$userId"] = actual ?: com.google.firebase.firestore.FieldValue.delete()
 
-        if (updates.isNotEmpty()) {
-            db.collection("exams").document(examId).update(updates).await()
-        }
+        docRef.update(updates).await()
     }
 
     suspend fun updateUserTotalStudyTime(userId: String, durationMs: Long): Result<Unit> = runCatching {
@@ -410,13 +409,14 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long): Result<Unit> {
+    suspend fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long, newMaxGrade: Double = 10.0): Result<Unit> {
         return try {
             db.collection("exams").document(examId)
                 .update(
                     "title", newTitle,
-                    "endsAtEpochMs", newEndsAtMs
-                ).await() // Added .await()
+                    "endsAtEpochMs", newEndsAtMs,
+                    "maxGrade", newMaxGrade
+                ).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

@@ -259,19 +259,15 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    fun addExam(subjectId: String, title: String, endsAtMs: Long) = viewModelScope.launch {
+    fun addExam(subjectId: String, title: String, endsAtMs: Long, maxGrade: Double) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
-        val cleaned = title.trim()
-        if (cleaned.isEmpty()) return@launch
-
-        repo.addExam(
-            Exam(
-                subjectId = subjectId,
-                ownerId = userId,
-                title = cleaned,
-                endsAtEpochMs = endsAtMs
-            )
-        ).onFailure { _error.value = it.message }
+        repo.addExam(Exam(
+            subjectId = subjectId,
+            ownerId = userId,
+            title = title,
+            endsAtEpochMs = endsAtMs,
+            maxGrade = maxGrade // THIS SAVES IT TO DB
+        )).onFailure { _error.value = it.message }
     }
     fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
     //Esto se usa para mostrar el nombre de la asignatura arriba del crono.
@@ -480,7 +476,13 @@ class MainViewModel : ViewModel() {
     // Función requerida por ExamsScreen en TestApp ---
     fun saveExamResults(examId: String, expected: Double?, sleep: Double?, actual: Double?) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
+        // To change wrong info, the user just submits new values.
+        // To "delete", we assume the UI will allow passing null/empty.
         repo.updateExamStats(examId, userId, expected, sleep, actual)
+            .onSuccess {
+                // Refresh data so the Ranking changes immediately
+                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
+            }
             .onFailure { _error.value = it.message }
     }
 
@@ -524,11 +526,13 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long) = viewModelScope.launch {
+    fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long, newMaxGrade: Double) = viewModelScope.launch {
+        // Keep your check: don't allow empty titles
         val cleaned = newTitle.trim()
         if (cleaned.isEmpty()) return@launch
 
-        repo.updateExam(examId, cleaned, newEndsAtMs)
+        // Pass the newMaxGrade to the repo so it actually updates in Firestore
+        repo.updateExam(examId, cleaned, newEndsAtMs, newMaxGrade)
             .onFailure { _error.value = it.message }
     }
 
@@ -570,7 +574,6 @@ class MainViewModel : ViewModel() {
                     val userSessions = sessions.filter { it.ownerId == userId }
 
                     // --- HABITS & TIME ---
-                    // These are always sums of the filtered sessions
                     val totalMs = userSessions.sumOf { it.durationMs }
                     val water = userSessions.sumOf { it.waterCount }
                     val coffee = userSessions.sumOf { it.coffeeCount }
@@ -578,29 +581,35 @@ class MainViewModel : ViewModel() {
                     val bathroom = userSessions.sumOf { it.bathroomBreaks }
 
                     // --- EXAM DATA (Grades & Sleep) ---
-                    // If an examId is selected, we look only at that one. Otherwise, all in subject.
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
-
-                    // Only count exams where the user actually has an actual grade entered
                     val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
+
+                    // Point 1: Normalize grades based on maxGrade (Converted to a scale of 10 for ranking)
+                    fun normalize(value: Double?, max: Double): Double {
+                        val actualMax = if (max <= 0.0) 10.0 else max
+                        return ((value ?: 0.0) / actualMax) * 10.0
+                    }
 
                     val avgAccuracy = if (completedExams.isNotEmpty()) {
                         completedExams.map {
-                            kotlin.math.abs((it.actualGrades[userId] ?: 0.0) - (it.expectedGrades[userId] ?: 0.0))
+                            val normActual = normalize(it.actualGrades[userId], it.maxGrade)
+                            val normExpected = normalize(it.expectedGrades[userId], it.maxGrade)
+                            kotlin.math.abs(normActual - normExpected)
                         }.average()
                     } else 0.0
 
-                    // --- NEW: Sleep and Direct Grades ---
-                    // If 1 exam is filtered, these are the exact values. If All Exams, these are averages.
+                    // Sleep and Direct Grades
                     val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
-                    val avgActual = if (completedExams.isNotEmpty()) completedExams.map { it.actualGrades[userId] ?: 0.0 }.average() else 0.0
-                    val avgExpected = if (completedExams.isNotEmpty()) completedExams.map { it.expectedGrades[userId] ?: 0.0 }.average() else 0.0
+
+                    // Show grades on a scale of 10 in the ranking for consistency
+                    val avgActual = if (completedExams.isNotEmpty()) completedExams.map { normalize(it.actualGrades[userId], it.maxGrade) }.average() else 0.0
+                    val avgExpected = if (completedExams.isNotEmpty()) completedExams.map { normalize(it.expectedGrades[userId], it.maxGrade) }.average() else 0.0
 
                     // --- EFFICIENCY ---
-                    // Grade Points per Hour of study
-                    val totalGradePoints = completedExams.sumOf { it.actualGrades[userId] ?: 0.0 }
+                    // We use normalized points per hour for a fair ranking
+                    val totalNormalizedPoints = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
                     val totalHours = totalMs / 3600000.0
-                    val efficiency = if (totalHours > 0.0) totalGradePoints / totalHours else 0.0
+                    val efficiency = if (totalHours > 0.0) totalNormalizedPoints / totalHours else 0.0
 
                     RankingEntryUi(
                         uid = userId,

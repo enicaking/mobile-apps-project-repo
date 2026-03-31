@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -40,8 +41,8 @@ fun ExamsScreen(
     onUserSelected: (UserProfile) -> Unit,
     onAddMember: () -> Unit,
     onLeaveSubject: () -> Unit,
-    onAddExam: (title: String, endsAtMs: Long) -> Unit,
-    onUpdateExam: (examId: String, title: String, endsAtMs: Long) -> Unit, // NEW CALLBACK
+    onAddExam: (title: String, endsAtMs: Long, maxGrade: Double) -> Unit,
+    onUpdateExam: (examId: String, title: String, endsAtMs: Long, maxGrade: Double) -> Unit, // UPDATED TO INCLUDE MAXGRADE
     onOpenInProgressExam: (Exam) -> Unit,
     onDeleteExam: (String) -> Unit,
     onBack: () -> Unit,
@@ -65,7 +66,7 @@ fun ExamsScreen(
     var newTitle by remember { mutableStateOf("") }
     var selectedEndsAtMs by remember { mutableStateOf<Long?>(null) }
 
-    // NEW: State for editing an existing exam
+    // State for editing an existing exam
     var examToEdit by remember { mutableStateOf<Exam?>(null) }
 
     var examForResults by remember { mutableStateOf<Exam?>(null) }
@@ -73,7 +74,13 @@ fun ExamsScreen(
     var sleepInput by remember { mutableStateOf("") }
     var actualInput by remember { mutableStateOf("") }
 
+    // Internal state to toggle between "View/Success" and "Edit" mode when finished
+    var isEditingFinishedExam by remember { mutableStateOf(false) }
+
     var examToDelete by remember { mutableStateOf<Exam?>(null) }
+
+    // maximum exam grade var so that it can be changed depends on exam, not just out of 10(but its still the base and assumed)
+    var maxGradeInput by remember { mutableStateOf("10.0") }
 
     Column(
         modifier = Modifier
@@ -114,6 +121,7 @@ fun ExamsScreen(
                 examToEdit = null // Fresh state for new exam
                 newTitle = ""
                 selectedEndsAtMs = null
+                maxGradeInput = "10.0"
                 showCreateDialog = true
             },
             modifier = Modifier
@@ -141,19 +149,21 @@ fun ExamsScreen(
                         exam = exam,
                         nowMs = nowMs,
                         currentUserId = currentUserId,
-                        isOwner = isOwner, // Pass ownership to show edit button
+                        isOwner = isOwner,
                         onOpenInProgressExam = onOpenInProgressExam,
                         onOpenFinishedExam = {
                             examForResults = exam
-                            expectedInput = ""
-                            sleepInput = ""
-                            actualInput = ""
+                            isEditingFinishedExam = false // Start in "View" mode
+                            expectedInput = exam.expectedGrades[currentUserId]?.toString() ?: ""
+                            sleepInput = exam.sleepHours[currentUserId]?.toString() ?: ""
+                            actualInput = exam.actualGrades[currentUserId]?.toString() ?: ""
                         },
                         onDelete = { examToDelete = exam },
                         onEdit = {
                             examToEdit = exam
                             newTitle = exam.title
                             selectedEndsAtMs = exam.endsAtEpochMs
+                            maxGradeInput = exam.maxGrade.toString()
                             showCreateDialog = true
                         }
                     )
@@ -177,6 +187,15 @@ fun ExamsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // MAX GRADE INPUT
+                    OutlinedTextField(
+                        value = maxGradeInput,
+                        onValueChange = { maxGradeInput = it },
+                        label = { Text("Max Grade (Scale)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -191,7 +210,6 @@ fun ExamsScreen(
                         TextButton(
                             onClick = {
                                 val currentCal = Calendar.getInstance()
-                                // Pre-set picker to existing date if editing
                                 selectedEndsAtMs?.let { currentCal.timeInMillis = it }
 
                                 DatePickerDialog(
@@ -224,10 +242,11 @@ fun ExamsScreen(
                 Button(
                     onClick = {
                         val ends = selectedEndsAtMs ?: return@Button
+                        val mGrade = maxGradeInput.toDoubleOrNull() ?: 10.0
                         if (examToEdit == null) {
-                            onAddExam(newTitle, ends)
+                            onAddExam(newTitle, ends, mGrade)
                         } else {
-                            onUpdateExam(examToEdit!!.id, newTitle, ends)
+                            onUpdateExam(examToEdit!!.id, newTitle, ends, mGrade)
                         }
                         showCreateDialog = false
                     },
@@ -240,7 +259,7 @@ fun ExamsScreen(
         )
     }
 
-    // Friend selection and result dialogs stay the same...
+    // Friend selection logic
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -266,6 +285,7 @@ fun ExamsScreen(
         )
     }
 
+    // RESULTS DIALOG: Improved flow with visual check and specific titles
     examForResults?.let { exam ->
         val hasExpected = exam.expectedGrades.containsKey(currentUserId)
         val hasSleep = exam.sleepHours.containsKey(currentUserId)
@@ -273,30 +293,112 @@ fun ExamsScreen(
 
         AlertDialog(
             onDismissRequest = { examForResults = null },
-            title = { Text(if (!hasExpected || !hasSleep) "Post-Exam Info" else "Final Result") },
+            title = {
+                Text(
+                    when {
+                        !hasExpected || !hasSleep -> "Post-Exam Info"
+                        !hasReal -> "Final Result"
+                        isEditingFinishedExam -> "Edit ${exam.title}"
+                        else -> exam.title
+                    }
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (!hasExpected || !hasSleep) {
-                        Text("Please use numeric format (e.g., 8.5 or 7)", style = MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                    } else if (!hasReal) {
-                        Text("Stats saved! Now, enter your real grade:", style = MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Real Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                    } else {
-                        Text("This exam is completed. Great job!")
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Exam Scale: /${exam.maxGrade}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+
+                    when {
+                        // PHASE 1: Post-Exam (Expected + Sleep)
+                        !hasExpected || !hasSleep -> {
+                            Text("Please use numeric format (e.g., 8.5 or 7)", style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        }
+
+                        // PHASE 2: Just Real Grade
+                        !hasReal -> {
+                            Text("Stats saved! Now, enter your real grade:", style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Real Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        }
+
+                        // PHASE 3: View Mode (Finished) - Visual summary
+                        !isEditingFinishedExam -> {
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = CircleShape,
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("✓", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+
+                            Text(
+                                text = "$actualInput / ${exam.maxGrade}",
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Expected", style = MaterialTheme.typography.labelSmall)
+                                    Text("$expectedInput", fontWeight = FontWeight.Bold)
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Sleep", style = MaterialTheme.typography.labelSmall)
+                                    Text("${sleepInput}h", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        // PHASE 4: Edit Mode (Finished)
+                        else -> {
+                            OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Real Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             },
             confirmButton = {
-                if (!hasReal) {
-                    Button(onClick = {
-                        if (!hasExpected || !hasSleep) onSaveResults(exam.id, expectedInput.toDoubleOrNull(), sleepInput.toDoubleOrNull(), null)
-                        else onSaveResults(exam.id, null, null, actualInput.toDoubleOrNull())
-                        examForResults = null
-                    }) { Text("Save Information") }
-                } else {
-                    Button(onClick = { examForResults = null }) { Text("Got it") }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    if (hasReal && !isEditingFinishedExam) {
+                        TextButton(onClick = { isEditingFinishedExam = true }) {
+                            Text("Edit Stats")
+                        }
+                        Button(onClick = { examForResults = null }) {
+                            Text("Got it!")
+                        }
+                    } else {
+                        // Cancel button for balance and navigation
+                        TextButton(onClick = {
+                            if (isEditingFinishedExam) isEditingFinishedExam = false else examForResults = null
+                        }) {
+                            Text("Cancel")
+                        }
+
+                        Button(
+                            onClick = {
+                                onSaveResults(
+                                    exam.id,
+                                    expectedInput.toDoubleOrNull(),
+                                    sleepInput.toDoubleOrNull(),
+                                    actualInput.toDoubleOrNull()
+                                )
+                                if (isEditingFinishedExam) isEditingFinishedExam = false else examForResults = null
+                            }
+                        ) {
+                            Text(if (isEditingFinishedExam) "Update" else "Save Information")
+                        }
+                    }
                 }
             }
         )
@@ -324,11 +426,11 @@ private fun ExamCard(
     exam: Exam,
     nowMs: Long,
     currentUserId: String,
-    isOwner: Boolean, // Added to show/hide Edit
+    isOwner: Boolean,
     onOpenInProgressExam: (Exam) -> Unit,
     onOpenFinishedExam: () -> Unit,
     onDelete: () -> Unit,
-    onEdit: () -> Unit // NEW Callback
+    onEdit: () -> Unit
 ) {
     val isPastDeadline = nowMs > exam.endsAtEpochMs
     val hasExpected = exam.expectedGrades.containsKey(currentUserId)
@@ -336,8 +438,8 @@ private fun ExamCard(
 
     val statusText = when {
         !isPastDeadline -> "In Progress"
-        !hasExpected -> "Waiting for Expected Grade"
-        !hasReal -> "Waiting for Final Grade"
+        !hasExpected -> "Waiting for Expected"
+        !hasReal -> "Waiting for Final"
         else -> "Finished"
     }
 
@@ -366,12 +468,12 @@ private fun ExamCard(
 
                 if (isOwner) {
                     IconButton(onClick = onEdit) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Exam", tint = MaterialTheme.colorScheme.primary)
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
 
                 IconButton(onClick = onDelete) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Exam", tint = MaterialTheme.colorScheme.error)
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

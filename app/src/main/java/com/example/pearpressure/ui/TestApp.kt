@@ -148,17 +148,20 @@ private fun HomeFlow(viewModel: MainViewModel) {
                     screen = HomeScreen.SUBJECTS
                 },
 
-                onAddExam = { title, endsAtMs ->
+                // UPDATED: Added maxGrade to match new ExamsScreen signature
+                onAddExam = { title, endsAtMs, maxGrade ->
                     viewModel.addExam(
                         subjectId = subject.id,
                         title = title,
-                        endsAtMs = endsAtMs
+                        endsAtMs = endsAtMs,
+                        maxGrade = maxGrade
                     )
                 },
 
                 // FIXED: Passing update logic to clear red errors
-                onUpdateExam = { examId, title, endsAtMs ->
-                    viewModel.updateExam(examId, title, endsAtMs)
+                // UPDATED: Now passing maxGrade so editing the scale actually works
+                onUpdateExam = { examId, title, endsAtMs, maxGrade ->
+                    viewModel.updateExam(examId, title, endsAtMs, maxGrade)
                 },
 
                 onOpenInProgressExam = { exam ->

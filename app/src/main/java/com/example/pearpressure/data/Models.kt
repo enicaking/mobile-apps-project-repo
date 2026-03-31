@@ -20,7 +20,8 @@ data class Exam(
     //ADDED FOR EXPECTED GRADE, REAL GRADE, SLEEPING HOURS
     var expectedGrades: Map<String, Double> = emptyMap(),
     var actualGrades: Map<String, Double> = emptyMap(),
-    var sleepHours: Map<String, Double> = emptyMap()
+    var sleepHours: Map<String, Double> = emptyMap(),
+    val maxGrade: Double = 10.0
 )
 
 data class UserProfile(

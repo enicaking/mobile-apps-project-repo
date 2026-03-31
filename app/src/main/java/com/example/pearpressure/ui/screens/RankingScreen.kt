@@ -15,6 +15,7 @@ import com.example.pearpressure.RankingEntryUi
 
 // 1. Time Scope: Total vs Weekly
 import com.example.pearpressure.RankingScope //GETTING IT FROM MAINVIEWMODEL
+
 // 2. Ranking Types (Dropdown)
 enum class RankingCategory(val label: String, val unit: String) {
     HARD_WORK("Hard Work (Time)", ""),
@@ -25,10 +26,9 @@ enum class RankingCategory(val label: String, val unit: String) {
     HABIT_ENERGY("Energy Drinks", "cans"),
     HABIT_BATHROOM("Bathroom Breaks", "breaks"),
 
-    GRADE_ACTUAL("Actual Grade", "/10"),
-
-    GRADE_EXPECTED("Expected Grade", "/10"),
-
+    // FIXED: Removed the hardcoded "/10" so it doesn't conflict with your new maxGrade system
+    GRADE_ACTUAL("Actual Grade", ""),
+    GRADE_EXPECTED("Expected Grade", ""),
     SLEEP("Sleep", "hrs")
 }
 
@@ -58,6 +58,9 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     }
 
     val currentSubject = subjects.firstOrNull { it.id == selectedSubjectId }
+
+    // Find selected exam to know the max scale for display
+    val currentSelectedExam = exams.find { it.id == selectedExamId }
 
     Scaffold { padding ->
         Column(
@@ -181,7 +184,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     RankingCategory.GRADE_ACTUAL -> entries.sortedByDescending { it.avgActualGrade }
                     RankingCategory.GRADE_EXPECTED -> entries.sortedByDescending { it.avgExpectedGrade }
                     RankingCategory.SLEEP -> entries.sortedByDescending { it.avgSleep }
-
                 }
             }
 
@@ -194,11 +196,13 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    itemsIndexed(sortedEntries) { index, entry -> // The 'entry' comes from here
+                    itemsIndexed(sortedEntries) { index, entry ->
                         RankingRow(
                             rank = index + 1,
                             entry = entry,
-                            category = selectedCategory // The 'category' comes from your state
+                            category = selectedCategory,
+                            // Pass the maxGrade from current exam if it exists, otherwise assume 10.0 for averages
+                            maxGrade = currentSelectedExam?.maxGrade ?: 10.0
                         )
                     }
                 }
@@ -231,7 +235,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
 }
 
 @Composable
-private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCategory) {
+private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCategory, maxGrade: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -259,9 +263,11 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
                 RankingCategory.HARD_WORK -> formatMsWithSeconds(entry.totalStudyTimeMs)
                 RankingCategory.ACCURACY -> "${"%.2f".format(entry.avgAccuracy)} ${category.unit}"
                 RankingCategory.EFFICIENCY -> "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
-                // FIXED: Mapping to your specific ViewModel fields
-                RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}${category.unit}"
-                RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}${category.unit}"
+
+                // FIXED: Now displays with the correct dynamic scale (e.g., 18.0/20.0)
+                RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}/${"%.1f".format(maxGrade)}"
+                RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}/${"%.1f".format(maxGrade)}"
+
                 RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
                 else -> {
                     val count = when(category) {
