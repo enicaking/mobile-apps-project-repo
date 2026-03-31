@@ -7,26 +7,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.RankingEntryUi
-
-// 1. Time Scope: Total vs Weekly
-import com.example.pearpressure.RankingScope //GETTING IT FROM MAINVIEWMODEL
+import com.example.pearpressure.RankingScope
 
 // 2. Ranking Types (Dropdown)
 enum class RankingCategory(val label: String, val unit: String) {
     HARD_WORK("Hard Work (Time)", ""),
-    ACCURACY("Accuracy (Error)", "pts"),
+    REALITY_GAP("Reality Gap", "pts"), // REPLACED Accuracy with Reality Gap
     EFFICIENCY("Efficiency", "pts/hr"),
     HABIT_WATER("Water Intake", "glasses"),
     HABIT_COFFEE("Coffee Consumed", "cups"),
     HABIT_ENERGY("Energy Drinks", "cans"),
     HABIT_BATHROOM("Bathroom Breaks", "breaks"),
-
-    // FIXED: Removed the hardcoded "/10" so it doesn't conflict with your new maxGrade system
     GRADE_ACTUAL("Actual Grade", ""),
     GRADE_EXPECTED("Expected Grade", ""),
     SLEEP("Sleep", "hrs")
@@ -35,31 +32,24 @@ enum class RankingCategory(val label: String, val unit: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RankingScreen(viewModel: MainViewModel = viewModel()) {
-    // Collect State from ViewModel
     val subjects by viewModel.subjects.collectAsState()
     val exams by viewModel.exams.collectAsState()
     val selectedSubjectId by viewModel.selectedRankingSubjectId.collectAsState()
     val entries by viewModel.rankingEntries.collectAsState()
 
-    // UI State for Filters
     var selectedScope by remember { mutableStateOf(RankingScope.TOTAL) }
     var selectedCategory by remember { mutableStateOf(RankingCategory.HARD_WORK) }
     var selectedExamId by remember { mutableStateOf<String?>(null) }
 
-    // Dropdown Visibility States
     var categoryExpanded by remember { mutableStateOf(false) }
     var examExpanded by remember { mutableStateOf(false) }
     var subjectPickerExpanded by remember { mutableStateOf(false) }
 
-    // --- AUTOMATIC REFRESH ---
-    // Triggers whenever Subject, Exam, or Scope changes
     LaunchedEffect(selectedSubjectId, selectedExamId, selectedScope) {
         viewModel.loadRanking(examId = selectedExamId, scope = selectedScope)
     }
 
     val currentSubject = subjects.firstOrNull { it.id == selectedSubjectId }
-
-    // Find selected exam to know the max scale for display
     val currentSelectedExam = exams.find { it.id == selectedExamId }
 
     Scaffold { padding ->
@@ -70,7 +60,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Subject Header Card
             OutlinedCard(
                 onClick = { subjectPickerExpanded = true },
                 modifier = Modifier.fillMaxWidth()
@@ -91,7 +80,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            // 2. Time Scope Segmented Toggle
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 RankingScope.entries.forEachIndexed { index, scope ->
                     SegmentedButton(
@@ -104,12 +92,10 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            // 3. Dual Dropdowns Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // EXAM FILTER DROPDOWN
                 ExposedDropdownMenuBox(
                     expanded = examExpanded,
                     onExpandedChange = { examExpanded = !examExpanded },
@@ -140,7 +126,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     }
                 }
 
-                // CATEGORY/METRIC DROPDOWN
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = !categoryExpanded },
@@ -168,14 +153,12 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            // 4. Ranking List
-            // We sort by the selected category here to ensure the order is correct
             val sortedEntries = remember(entries, selectedCategory) {
                 when (selectedCategory) {
                     RankingCategory.HARD_WORK -> entries.sortedByDescending { it.totalStudyTimeMs }
-                    RankingCategory.ACCURACY -> entries.sortedBy { it.avgAccuracy }
+                    RankingCategory.REALITY_GAP -> entries.sortedByDescending { it.avgActualGrade - it.avgExpectedGrade }
                     RankingCategory.EFFICIENCY -> entries.sortedByDescending { it.efficiencyScore }
                     RankingCategory.HABIT_WATER -> entries.sortedByDescending { it.totalWater }
                     RankingCategory.HABIT_COFFEE -> entries.sortedByDescending { it.totalCoffee }
@@ -201,7 +184,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                             rank = index + 1,
                             entry = entry,
                             category = selectedCategory,
-                            // Pass the maxGrade from current exam if it exists, otherwise assume 10.0 for averages
                             maxGrade = currentSelectedExam?.maxGrade ?: 10.0
                         )
                     }
@@ -210,7 +192,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    // --- SUBJECT PICKER DIALOG ---
     if (subjectPickerExpanded) {
         AlertDialog(
             onDismissRequest = { subjectPickerExpanded = false },
@@ -258,16 +239,18 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
                 Text(category.label, style = MaterialTheme.typography.bodySmall)
             }
 
-            // --- DATA DISPLAY ---
+            // --- REALITY GAP MATH ---
+            val realityGapValue = entry.avgActualGrade - entry.avgExpectedGrade
+
             val displayValue = when (category) {
                 RankingCategory.HARD_WORK -> formatMsWithSeconds(entry.totalStudyTimeMs)
-                RankingCategory.ACCURACY -> "${"%.2f".format(entry.avgAccuracy)} ${category.unit}"
+                RankingCategory.REALITY_GAP -> {
+                    val sign = if (realityGapValue > 0) "+" else ""
+                    "$sign${"%.1f".format(realityGapValue)} ${category.unit}"
+                }
                 RankingCategory.EFFICIENCY -> "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
-
-                // FIXED: Now displays with the correct dynamic scale (e.g., 18.0/20.0)
                 RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}/${"%.1f".format(maxGrade)}"
                 RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}/${"%.1f".format(maxGrade)}"
-
                 RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
                 else -> {
                     val count = when(category) {
@@ -280,17 +263,22 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
                 }
             }
 
+            val valueColor = when {
+                category == RankingCategory.REALITY_GAP && realityGapValue > 0 -> Color(0xFF4CAF50) // Positive Green
+                category == RankingCategory.REALITY_GAP && realityGapValue < 0 -> Color(0xFFF44336) // Negative Red
+                else -> MaterialTheme.colorScheme.primary
+            }
+
             Text(
                 text = displayValue,
                 fontWeight = FontWeight.ExtraBold,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = valueColor
             )
         }
     }
 }
 
-// FORMATTER: Now shows Hours, Minutes, and Seconds
 private fun formatMsWithSeconds(ms: Long): String {
     val hours = ms / 3_600_000
     val minutes = (ms % 3_600_000) / 60_000
