@@ -23,7 +23,13 @@ enum class RankingCategory(val label: String, val unit: String) {
     HABIT_WATER("Water Intake", "glasses"),
     HABIT_COFFEE("Coffee Consumed", "cups"),
     HABIT_ENERGY("Energy Drinks", "cans"),
-    HABIT_BATHROOM("Bathroom Breaks", "breaks")
+    HABIT_BATHROOM("Bathroom Breaks", "breaks"),
+
+    GRADE_ACTUAL("Actual Grade", "/10"),
+
+    GRADE_EXPECTED("Expected Grade", "/10"),
+
+    SLEEP("Sleep", "hrs")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,6 +178,10 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     RankingCategory.HABIT_COFFEE -> entries.sortedByDescending { it.totalCoffee }
                     RankingCategory.HABIT_ENERGY -> entries.sortedByDescending { it.totalEnergy }
                     RankingCategory.HABIT_BATHROOM -> entries.sortedByDescending { it.totalBathroom }
+                    RankingCategory.GRADE_ACTUAL -> entries.sortedByDescending { it.avgActualGrade }
+                    RankingCategory.GRADE_EXPECTED -> entries.sortedByDescending { it.avgExpectedGrade }
+                    RankingCategory.SLEEP -> entries.sortedByDescending { it.avgSleep }
+
                 }
             }
 
@@ -184,8 +194,12 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    itemsIndexed(sortedEntries) { index, entry ->
-                        RankingRow(rank = index + 1, entry = entry, category = selectedCategory)
+                    itemsIndexed(sortedEntries) { index, entry -> // The 'entry' comes from here
+                        RankingRow(
+                            rank = index + 1,
+                            entry = entry,
+                            category = selectedCategory // The 'category' comes from your state
+                        )
                     }
                 }
             }
@@ -245,6 +259,10 @@ private fun RankingRow(rank: Int, entry: RankingEntryUi, category: RankingCatego
                 RankingCategory.HARD_WORK -> formatMsWithSeconds(entry.totalStudyTimeMs)
                 RankingCategory.ACCURACY -> "${"%.2f".format(entry.avgAccuracy)} ${category.unit}"
                 RankingCategory.EFFICIENCY -> "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
+                // FIXED: Mapping to your specific ViewModel fields
+                RankingCategory.GRADE_ACTUAL -> "${"%.1f".format(entry.avgActualGrade)}${category.unit}"
+                RankingCategory.GRADE_EXPECTED -> "${"%.1f".format(entry.avgExpectedGrade)}${category.unit}"
+                RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
                 else -> {
                     val count = when(category) {
                         RankingCategory.HABIT_WATER -> entry.totalWater

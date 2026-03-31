@@ -24,9 +24,9 @@ data class RankingEntryUi(
     val totalEnergy: Int = 0,
     val totalBathroom: Int = 0,
     //just general average sleep, expected and real grades:
-    val lastSleep: Double = 0.0,
-    val lastExpected: Double = 0.0,
-    val lastActual: Double = 0.0
+    val avgSleep: Double = 0.0,
+    val avgExpectedGrade: Double = 0.0,
+    val avgActualGrade: Double = 0.0
 )
 
 data class IncomingFriendRequestUi(
@@ -570,17 +570,19 @@ class MainViewModel : ViewModel() {
                     val userSessions = sessions.filter { it.ownerId == userId }
 
                     // --- HABITS & TIME ---
+                    // These are always sums of the filtered sessions
                     val totalMs = userSessions.sumOf { it.durationMs }
                     val water = userSessions.sumOf { it.waterCount }
                     val coffee = userSessions.sumOf { it.coffeeCount }
                     val energy = userSessions.sumOf { it.energyDrinkCount }
                     val bathroom = userSessions.sumOf { it.bathroomBreaks }
 
-                    // --- ACCURACY ---
+                    // --- EXAM DATA (Grades & Sleep) ---
+                    // If an examId is selected, we look only at that one. Otherwise, all in subject.
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
-                    val completedExams = relevantExams.filter {
-                        it.actualGrades.containsKey(userId) && it.expectedGrades.containsKey(userId)
-                    }
+
+                    // Only count exams where the user actually has an actual grade entered
+                    val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
 
                     val avgAccuracy = if (completedExams.isNotEmpty()) {
                         completedExams.map {
@@ -588,10 +590,17 @@ class MainViewModel : ViewModel() {
                         }.average()
                     } else 0.0
 
+                    // --- NEW: Sleep and Direct Grades ---
+                    // If 1 exam is filtered, these are the exact values. If All Exams, these are averages.
+                    val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
+                    val avgActual = if (completedExams.isNotEmpty()) completedExams.map { it.actualGrades[userId] ?: 0.0 }.average() else 0.0
+                    val avgExpected = if (completedExams.isNotEmpty()) completedExams.map { it.expectedGrades[userId] ?: 0.0 }.average() else 0.0
+
                     // --- EFFICIENCY ---
-                    val totalGrade = completedExams.sumOf { it.actualGrades[userId] ?: 0.0 }
+                    // Grade Points per Hour of study
+                    val totalGradePoints = completedExams.sumOf { it.actualGrades[userId] ?: 0.0 }
                     val totalHours = totalMs / 3600000.0
-                    val efficiency = if (totalHours > 0) totalGrade / totalHours else 0.0
+                    val efficiency = if (totalHours > 0.0) totalGradePoints / totalHours else 0.0
 
                     RankingEntryUi(
                         uid = userId,
@@ -602,7 +611,10 @@ class MainViewModel : ViewModel() {
                         totalWater = water,
                         totalCoffee = coffee,
                         totalEnergy = energy,
-                        totalBathroom = bathroom
+                        totalBathroom = bathroom,
+                        avgSleep = avgSleep,
+                        avgActualGrade = avgActual,
+                        avgExpectedGrade = avgExpected
                     )
                 }
             }

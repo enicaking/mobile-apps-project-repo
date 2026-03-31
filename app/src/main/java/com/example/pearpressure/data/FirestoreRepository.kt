@@ -12,7 +12,6 @@ class FirestoreRepository {
 
     // ── SUBJECTS ──────────────────────────────────────────
 
-
     suspend fun addSubject(subject: Subject): Result<Unit> = runCatching {
         // If subject.id is empty, Firestore will generate one.
         // If it has one (e.g. from @DocumentId), it will use it.
@@ -54,6 +53,7 @@ class FirestoreRepository {
 
         batch.commit().await()
     }
+
     //LEAVE, for the non owner users of a subject
     suspend fun leaveSubject(subjectId: String, userId: String): Result<Unit> = runCatching {
         // Usamos FieldValue.arrayRemove para quitar el ID del usuario de la lista de miembros
@@ -226,8 +226,6 @@ class FirestoreRepository {
             }
     }
 
-
-
     fun listenIncomingFriendRequests(
         myUid: String,
         onChange: (List<FriendRequest>) -> Unit
@@ -372,7 +370,7 @@ class FirestoreRepository {
     }
 
     // --- ADD FRIENDS TO SUBJECT
-    // ── STATS & RANKING UPDATES (RECUPERADAS) ──────────────────
+    // ── STATS & RANKING UPDATES  ──────────────────
 
     suspend fun updateExamStats(
         examId: String,
@@ -401,22 +399,55 @@ class FirestoreRepository {
     }
 
     //being able to edit subjects and exams::
-    suspend fun updateSubjectName(subjectId: String, newName: String): Result<Unit> = try {
-        db.collection("subjects").document(subjectId)
-            .update("name", newName)
-        Result.success(Unit)
-    } catch (e: Exception) { Result.failure(e) }
+    suspend fun updateSubjectName(subjectId: String, newName: String): Result<Unit> {
+        return try {
+            db.collection("subjects").document(subjectId)
+                .update("name", newName)
+                .await() // Added .await() to ensure it finishes
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    suspend fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long): Result<Unit> = try {
-        db.collection("exams").document(examId)
-            .update(
-                "title", newTitle,
-                "endsAtEpochMs", newEndsAtMs
-            )
-        Result.success(Unit)
-    } catch (e: Exception) { Result.failure(e) }
+    suspend fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long): Result<Unit> {
+        return try {
+            db.collection("exams").document(examId)
+                .update(
+                    "title", newTitle,
+                    "endsAtEpochMs", newEndsAtMs
+                ).await() // Added .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
+    // ── RANKING FETCHERS (PHASE 3) ───────────────────────
 
+    // Gets all exams for a specific subject (for Accuracy/Efficiency rankings)
+    suspend fun getExamsBySubjectSync(subjectId: String): List<Exam> = try {
+        db.collection("exams")
+            .whereEqualTo("subjectId", subjectId)
+            .get()
+            .await()
+            .toObjects(Exam::class.java)
+    } catch (e: Exception) { emptyList() }
+
+    // Gets all study sessions linked to specific exams (for Habit/Hard Work rankings)
+    suspend fun getSessionsForExamsSync(examIds: List<String>): List<Session> = try {
+        if (examIds.isEmpty()) emptyList()
+        else {
+            val result = mutableListOf<Session>()
+            // Firestore limit is 10 for 'whereIn', so we chunk the IDs
+            examIds.chunked(10).forEach { chunk ->
+                val snap = db.collection("sessions")
+                    .whereIn("examId", chunk)
+                    .get()
+                    .await()
+                result += snap.toObjects(Session::class.java)
+            }
+            result
+        }
+    } catch (e: Exception) { emptyList() }
 }
-
-
