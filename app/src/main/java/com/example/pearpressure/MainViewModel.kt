@@ -144,6 +144,7 @@ class MainViewModel : ViewModel() {
         sessionsListener = repo.listenToSessionsForUser(userId) {
             _sessions.value = it
         }
+        loadCurrentUserProfile()
     }
 
 
@@ -200,7 +201,10 @@ class MainViewModel : ViewModel() {
     fun signIn(email: String, pass: String, onSuccess: () -> Unit) = viewModelScope.launch {
         authRepo.signIn(email, pass)
             .onSuccess { user ->
-                user?.uid?.let { startListening(it) }
+                user?.uid?.let {
+                    startListening(it)
+                    loadCurrentUserProfile()
+                }
                 onSuccess()
             }
             .onFailure { _error.value = it.message }
@@ -235,6 +239,7 @@ class MainViewModel : ViewModel() {
         _incomingRequests.value = emptyList()
         _outgoingRequests.value = emptyList()
         _studyBuddies.value = emptyList()
+        _currentUserProfile.value = null
 
         _selectedRankingSubjectId.value = null
         _friendSearchResult.value = null
@@ -373,7 +378,7 @@ class MainViewModel : ViewModel() {
         currentUserProfile.value?.username ?: "No username"
 
     fun getCurrentUserTime(): Long =
-        currentUserProfile.value?.totalStudyTime ?: 10000000
+        currentUserProfile.value?.totalStudyTime ?: 0L
 
 
     override fun onCleared() {

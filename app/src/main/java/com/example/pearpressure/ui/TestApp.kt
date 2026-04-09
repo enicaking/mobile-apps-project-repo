@@ -114,7 +114,9 @@ private fun HomeFlow(viewModel: MainViewModel) {
         }
 
         HomeScreen.EXAMS -> {
-            val subject = selectedSubjectId?.let { viewModel.getSubjectById(it) }
+            val subject = selectedSubjectId?.let { id: String ->
+                viewModel.getSubjectById(id)
+            }
             if (subject == null) {
                 screen = HomeScreen.SUBJECTS
                 return

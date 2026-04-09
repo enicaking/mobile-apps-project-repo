@@ -6,6 +6,9 @@ import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -17,9 +20,17 @@ fun ProfileScreen(
     viewModel: MainViewModel,
     onLogout: () -> Unit
 ) {
-    val email = viewModel.getCurrentUserEmail()
-    val username = viewModel.getCurrentUserName()
-    val totalstudytime = viewModel.getCurrentUserTime()
+    // Load profile when entering this screen
+    LaunchedEffect(Unit) {
+        viewModel.loadCurrentUserProfile()
+    }
+
+    // Observe profile so UI recomposes when data arrives
+    val currentUserProfile by viewModel.currentUserProfile.collectAsState()
+
+    val email = currentUserProfile?.email ?: viewModel.getCurrentUserEmail()
+    val username = currentUserProfile?.username ?: "No username"
+    val totalStudyTime = currentUserProfile?.totalStudyTime ?: 0L
 
     Column(
         modifier = Modifier
@@ -35,7 +46,6 @@ fun ProfileScreen(
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        // Profile Icon and Email
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = null,
@@ -66,14 +76,12 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Total time studied: " + formatStudyTime(totalstudytime),
+            text = "Total time studied: ${formatStudyTime(totalStudyTime)}",
             style = MaterialTheme.typography.titleLarge
         )
 
-
         Spacer(modifier = Modifier.weight(1f))
 
-        // Sign Out Button
         Button(
             onClick = {
                 viewModel.signOut { onLogout() }
@@ -100,7 +108,7 @@ private fun formatStudyTime(ms: Long): String {
 
     return when {
         hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes }min"
+        minutes > 0 -> "${minutes} min"
         else -> "Less than 1 min"
     }
 }
