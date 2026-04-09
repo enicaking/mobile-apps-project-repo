@@ -15,11 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.data.Subject
+import com.example.pearpressure.ui.navigation.AppRoutes
 
 @Composable
 fun SubjectsScreen(
     subjects: List<Subject>,
     currentUserId: String, // Necesario para saber si eres el owner
+
     onAddSubject: (String) -> Unit,
     onOpenSubject: (String) -> Unit,
     onActionSubject: (Subject) -> Unit, // Maneja borrar o salir

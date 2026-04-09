@@ -1,0 +1,24 @@
+package com.example.pearpressure.ui.navigation
+
+sealed class AppRoutes(val route: String) {
+
+    // Main screens
+    object Subjects : AppRoutes("subjects")
+    object Ranking : AppRoutes("ranking")
+    object Friends : AppRoutes("friends")
+    object Profile : AppRoutes("profile")
+
+    // Screens with arguments
+    object Exams : AppRoutes("exams/{subjectId}") {
+        fun createExamsRoute(subjectId: String): String {
+            return "exams/$subjectId"
+        }
+    }
+
+    object Stopwatch : AppRoutes("stopwatch/{examId}") {
+        fun createStopwatchRoute(examId: String): String {
+            return "stopwatch/$examId"
+        }
+    }
+
+}

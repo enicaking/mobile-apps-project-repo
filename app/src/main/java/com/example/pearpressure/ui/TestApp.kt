@@ -3,6 +3,8 @@ package com.example.pearpressure.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -11,6 +13,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.ui.screens.*
 import com.example.pearpressure.data.UserProfile
+import com.example.pearpressure.ui.navigation.AppRoutes
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 private enum class HomeScreen { SUBJECTS, EXAMS, STOPWATCH }
 
@@ -46,19 +53,59 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
         }
 
         AuthScreen.APP -> {
-            var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
-
+            val navController = rememberNavController()
+            val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+            val subjects by viewModel.subjects.collectAsState()
             Scaffold(
                 bottomBar = {
                     NavigationBar {
-                        MainTabs.forEach { item ->
-                            NavigationBarItem(
-                                selected = selectedTab == item.tab,
-                                onClick = { selectedTab = item.tab },
-                                icon = { Icon(item.icon, contentDescription = item.label) },
-                                label = { Text(item.label) }
-                            )
-                        }
+                        NavigationBarItem(
+                            selected = currentRoute == AppRoutes.Subjects.route,
+                            onClick = {
+                                navController.navigate(AppRoutes.Subjects.route) {
+                                    popUpTo(AppRoutes.Subjects.route)
+                                    launchSingleTop = true
+                                }
+                            },
+                            icon = { Icon(Icons.Default.Home, contentDescription = "Subjects") },
+                            label = { Text("Home") }
+                        )
+
+                        NavigationBarItem(
+                            selected = currentRoute == AppRoutes.Ranking.route,
+                            onClick = {
+                                navController.navigate(AppRoutes.Ranking.route) {
+                                    popUpTo(AppRoutes.Subjects.route)
+                                    launchSingleTop = true
+                                }
+                            },
+                            icon = { Icon(Icons.Default.Star, contentDescription = "Ranking") },
+                            label = { Text("Ranking") }
+                        )
+
+                        NavigationBarItem(
+                            selected = currentRoute == AppRoutes.Friends.route,
+                            onClick = {
+                                navController.navigate(AppRoutes.Friends.route) {
+                                    popUpTo(AppRoutes.Subjects.route)
+                                    launchSingleTop = true
+                                }
+                            },
+                            icon = { Icon(Icons.Default.Person, contentDescription = "Friends") },
+                            label = { Text("Friends") }
+                        )
+
+                        NavigationBarItem(
+                            selected = currentRoute == AppRoutes.Profile.route,
+                            onClick = {
+                                navController.navigate(AppRoutes.Profile.route) {
+                                    popUpTo(AppRoutes.Subjects.route)
+                                    launchSingleTop = true
+                                }
+                            },
+                            icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profile") },
+                            label = { Text("Profile") }
+                        )
                     }
                 }
             ) { innerPadding ->
@@ -67,14 +114,57 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    when (selectedTab) {
-                        MainTab.HOME -> HomeFlow(viewModel)
-                        MainTab.RANKING -> RankingScreen(viewModel = viewModel)
-                        MainTab.FRIENDS -> FriendsScreen(viewModel = viewModel)
-                        MainTab.PROFILE -> ProfileScreen(
-                            viewModel = viewModel,
-                            onLogout = { authScreen = AuthScreen.LOGIN }
-                        )
+                    NavHost(
+                        navController = navController,
+                        startDestination = AppRoutes.Subjects.route,
+                    ) {
+
+                        composable(AppRoutes.Subjects.route) {
+                            SubjectsScreen(
+                                subjects = subjects,
+                                currentUserId = viewModel.getCurrentUserId(),
+
+                                onAddSubject = { name ->
+                                    viewModel.addSubject(name)
+                                },
+
+                                onOpenSubject = { subjectId ->
+                                    navController.navigate(
+                                        AppRoutes.Exams.createExamsRoute(subjectId)
+                                    )
+                                },
+
+                                onActionSubject = { subject ->
+                                    viewModel.deleteOrLeaveSubject(subject)
+                                },
+
+                                onUpdateSubject = { id, newName ->
+                                    viewModel.updateSubjectName(id, newName)
+                                }
+                            )
+                        }
+
+                        composable(AppRoutes.Exams.route) { backStackEntry ->
+                            val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
+                            Text("Exams for subject: $subjectId") // temporal
+                        }
+
+                        composable(AppRoutes.Ranking.route) {
+                            RankingScreen()
+                        }
+
+                        composable(AppRoutes.Friends.route) {
+                            FriendsScreen()
+                        }
+
+                        composable(AppRoutes.Profile.route) {
+                            ProfileScreen(
+                                viewModel = viewModel,
+                                onLogout = {
+                                    authScreen = AuthScreen.LOGIN
+                                }
+                            )
+                        }
                     }
                 }
             }
