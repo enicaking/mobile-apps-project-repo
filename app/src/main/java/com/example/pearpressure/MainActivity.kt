@@ -10,6 +10,12 @@ import androidx.lifecycle.lifecycleScope
 import com.example.pearpressure.ui.TestApp
 import com.example.pearpressure.ui.theme.SofiaTestTheme
 import kotlinx.coroutines.launch
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.example.pearpressure.notifications.NotificationUtils
 
 class MainActivity : ComponentActivity() {
 
@@ -26,10 +32,31 @@ class MainActivity : ComponentActivity() {
             }
         } //Esto escucha errores del ViewModel y los manda al log.
 
+        NotificationUtils.createExamReminderChannel(this)
+        requestPostNotificationsPermissionIfNeeded()
+
         setContent {
             SofiaTestTheme {
                 TestApp(viewModel = viewModel)
             }
         }
     }
+
+    private fun requestPostNotificationsPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < 33) return
+
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                1001
+            )
+        }
+    }
+
 }

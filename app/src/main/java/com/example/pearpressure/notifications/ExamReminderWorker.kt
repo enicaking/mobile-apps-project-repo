@@ -17,9 +17,9 @@ import java.util.Date
 import java.util.Locale
 
 class ExamReminderWorker(
-    private val ctx: Context,
+    appContext: Context,
     params: WorkerParameters
-) : CoroutineWorker(ctx, params) {
+) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         // Android 13+ needs runtime permission

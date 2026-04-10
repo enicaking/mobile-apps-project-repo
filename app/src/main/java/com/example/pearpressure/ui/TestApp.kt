@@ -18,6 +18,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import androidx.compose.ui.platform.LocalContext
+import com.example.pearpressure.notifications.ExamReminderScheduler
+
 
 // AuthScreen handles login logic
 private enum class AuthScreen { LOGIN, COMPLETE_PROFILE, APP }
@@ -54,6 +57,25 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
             val navController = rememberNavController()
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val subjects by viewModel.subjects.collectAsState()
+            val context = LocalContext.current
+            val exams by viewModel.exams.collectAsState()
+
+            //Notification exam remainder
+            LaunchedEffect(subjects, exams) {
+                subjects.forEach { subject ->
+                    exams
+                        .filter { it.subjectId == subject.id }
+                        .forEach { exam ->
+                            ExamReminderScheduler.scheduleOneDayBefore(
+                                context = context.applicationContext,
+                                examId = exam.id,
+                                subjectName = subject.name,
+                                examTitle = exam.title,
+                                examEndsAtMs = exam.endsAtEpochMs
+                            )
+                        }
+                }
+            }
             Scaffold(
                 // Bottom menu bar
                 bottomBar = {
@@ -175,9 +197,28 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 },
 
                                 onAddExam = { title, endsAtMs, maxGrade ->
-                                    viewModel.addExam(subject.id, title, endsAtMs, maxGrade) },
+                                    viewModel.addExam(subject.id, title, endsAtMs, maxGrade)
+
+                                    // Temporary local scheduling using a predictable fallback id until
+                                    // the data layer is improved to return the created exam id.
+                                    ExamReminderScheduler.scheduleOneDayBefore(
+                                        context = context.applicationContext,
+                                        examId = "${subject.id}_${title}_${endsAtMs}",
+                                        subjectName = subject.name,
+                                        examTitle = title,
+                                        examEndsAtMs = endsAtMs
+                                    )
+                                },
                                 onUpdateExam = { examId, title, endsAtMs, maxGrade ->
                                     viewModel.updateExam(examId, title, endsAtMs, maxGrade)
+
+                                    ExamReminderScheduler.scheduleOneDayBefore(
+                                        context = context.applicationContext,
+                                        examId = examId,
+                                        subjectName = subject.name,
+                                        examTitle = title,
+                                        examEndsAtMs = endsAtMs
+                                    )
                                 },
                                 // Access dynamic route
                                 onOpenInProgressExam = { exam ->
@@ -185,7 +226,10 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                         AppRoutes.Stopwatch.createStopwatchRoute(exam.id)
                                     )
                                 },
-                                onDeleteExam = { examId -> viewModel.deleteExam(examId) },
+                                onDeleteExam = { examId ->
+                                    viewModel.deleteExam(examId)
+                                    ExamReminderScheduler.cancel(context.applicationContext, examId)
+                                },
 
                                 // Button to go back to subjects
                                 onBack = { navController.popBackStack() },
