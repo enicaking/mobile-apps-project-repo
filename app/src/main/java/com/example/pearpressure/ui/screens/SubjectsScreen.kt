@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.data.Subject
-import com.example.pearpressure.ui.navigation.AppRoutes
 
 @Composable
 fun SubjectsScreen(
@@ -94,7 +93,7 @@ fun SubjectsScreen(
                                 )
                             }
 
-                            // Button Row: Edit + Action (Delete/Leave)
+                            // Button Row: Edit and Action (Leave or delete)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (isOwner) {
                                     IconButton(onClick = {
@@ -131,7 +130,7 @@ fun SubjectsScreen(
         }
     }
 
-    // Diálogo para crear O editar asignatura
+    // Dialog to create or edit an existing subject
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -164,7 +163,7 @@ fun SubjectsScreen(
         )
     }
 
-    // Diálogo de confirmación de Borrado o Salida
+    // Dialog to confirm leaving or deleting a subject
     subjectToAction?.let { subject ->
         val isOwner = subject.ownerId == currentUserId
         AlertDialog(

@@ -19,18 +19,20 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
-
+// AuthScreen handles login logic
 private enum class AuthScreen { LOGIN, COMPLETE_PROFILE, APP }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TestApp(viewModel: MainViewModel = viewModel()) {
+    // Check if user is logged in
     var authScreen by remember {
         mutableStateOf(
             if (viewModel.isUserLoggedIn()) AuthScreen.APP else AuthScreen.LOGIN
         )
     }
 
+    // Flow for sign up -> complete profile -> log in
     when (authScreen) {
         AuthScreen.LOGIN -> {
             LoginScreen(
@@ -47,11 +49,13 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
             )
         }
 
+        // Main app logic
         AuthScreen.APP -> {
             val navController = rememberNavController()
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val subjects by viewModel.subjects.collectAsState()
             Scaffold(
+                // Bottom menu bar
                 bottomBar = {
                     NavigationBar {
                         NavigationBarItem(
@@ -110,6 +114,7 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                         .padding(innerPadding)
                 ) {
                     NavHost(
+                        // Nav controller is what allows flow between app pages
                         navController = navController,
                         startDestination = AppRoutes.Subjects.route,
                     ) {
@@ -119,23 +124,12 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 subjects = subjects,
                                 currentUserId = viewModel.getCurrentUserId(),
 
-                                onAddSubject = { name ->
-                                    viewModel.addSubject(name)
-                                },
-
+                                onAddSubject = { name -> viewModel.addSubject(name) },
                                 onOpenSubject = { subjectId ->
-                                    navController.navigate(
-                                        AppRoutes.Exams.createExamsRoute(subjectId)
-                                    )
+                                    navController.navigate(AppRoutes.Exams.createExamsRoute(subjectId))
                                 },
-
-                                onActionSubject = { subject ->
-                                    viewModel.deleteOrLeaveSubject(subject)
-                                },
-
-                                onUpdateSubject = { id, newName ->
-                                    viewModel.updateSubjectName(id, newName)
-                                }
+                                onActionSubject = { subject -> viewModel.deleteOrLeaveSubject(subject) },
+                                onUpdateSubject = { id, newName -> viewModel.updateSubjectName(id, newName) }
                             )
                         }
 
@@ -145,13 +139,10 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 type = NavType.StringType
                             })
                         ) { backStackEntry ->
-
                             val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
 
                             // Load data when entering
-                            LaunchedEffect(subjectId) {
-                                viewModel.loadExams(subjectId)
-                            }
+                            LaunchedEffect(subjectId) { viewModel.loadExams(subjectId) }
 
                             val subject = viewModel.getSubjectById(subjectId)
                             val exams by viewModel.exams.collectAsState()
@@ -173,48 +164,33 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 friends = friends,
                                 currentUserId = currentUserId,
 
-                                onSearchFriends = { query ->
-                                    viewModel.searchFriends(query)
-                                },
-
+                                onSearchFriends = { query -> viewModel.searchFriends(query) },
                                 onUserSelected = { user ->
                                     viewModel.addMemberToSubject(subject.id, user.uid)
                                 },
-
-                                onAddMember = {
-                                    viewModel.searchFriends("")
-                                },
-
+                                onAddMember = { viewModel.searchFriends("") },
                                 onLeaveSubject = {
                                     viewModel.deleteOrLeaveSubject(subject)
                                     navController.popBackStack()
                                 },
 
                                 onAddExam = { title, endsAtMs, maxGrade ->
-                                    viewModel.addExam(subject.id, title, endsAtMs, maxGrade)
-                                },
-
+                                    viewModel.addExam(subject.id, title, endsAtMs, maxGrade) },
                                 onUpdateExam = { examId, title, endsAtMs, maxGrade ->
                                     viewModel.updateExam(examId, title, endsAtMs, maxGrade)
                                 },
-
+                                // Access dynamic route
                                 onOpenInProgressExam = { exam ->
                                     navController.navigate(
                                         AppRoutes.Stopwatch.createStopwatchRoute(exam.id)
                                     )
                                 },
+                                onDeleteExam = { examId -> viewModel.deleteExam(examId) },
 
-                                onDeleteExam = { examId ->
-                                    viewModel.deleteExam(examId)
-                                },
-
-                                onBack = {
-                                    navController.popBackStack()
-                                },
-
+                                // Button to go back to subjects
+                                onBack = { navController.popBackStack() },
                                 onSaveResults = { examId, expected, sleep, actual ->
-                                    viewModel.saveExamResults(examId, expected, sleep, actual)
-                                }
+                                    viewModel.saveExamResults(examId, expected, sleep, actual) }
                             )
                         }
 
@@ -224,18 +200,17 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 type = NavType.StringType
                             })
                         ) { backStackEntry ->
+                            // Backstack contains a history of previous screens
+                            // This is what allows the 'back' button to work
 
                             val examId = backStackEntry.arguments?.getString("examId") ?: ""
-
                             val exam = viewModel.getExamById(examId)
-
                             if (exam == null) {
                                 Text("Exam not found")
                                 return@composable
                             }
 
                             val subject = viewModel.getSubjectById(exam.subjectId)
-
                             if (subject == null) {
                                 Text("Subject not found")
                                 return@composable
@@ -248,20 +223,13 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 examTitle = exam.title,
                                 endsAtEpochMs = exam.endsAtEpochMs,
 
-                                onBack = {
-                                    navController.popBackStack()
-                                }
+                                onBack = { navController.popBackStack() }
                             )
                         }
 
-                        composable(AppRoutes.Ranking.route) {
-                            RankingScreen()
-                        }
-
-                        composable(AppRoutes.Friends.route) {
-                            FriendsScreen()
-                        }
-
+                        // Rest of the main screens that don't contain dynamic routes
+                        composable(AppRoutes.Ranking.route) { RankingScreen() }
+                        composable(AppRoutes.Friends.route) { FriendsScreen() }
                         composable(AppRoutes.Profile.route) {
                             ProfileScreen(
                                 viewModel = viewModel,
