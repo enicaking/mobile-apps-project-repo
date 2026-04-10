@@ -59,6 +59,7 @@ class ExamReminderWorker(
             .setContentText("$subjectName • Ends at $endsAtText")
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setNumber(1)
             .build()
 
         NotificationManagerCompat.from(applicationContext)

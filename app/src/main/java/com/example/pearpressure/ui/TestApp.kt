@@ -199,15 +199,7 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 onAddExam = { title, endsAtMs, maxGrade ->
                                     viewModel.addExam(subject.id, title, endsAtMs, maxGrade)
 
-                                    // Temporary local scheduling using a predictable fallback id until
-                                    // the data layer is improved to return the created exam id.
-                                    ExamReminderScheduler.scheduleOneDayBefore(
-                                        context = context.applicationContext,
-                                        examId = "${subject.id}_${title}_${endsAtMs}",
-                                        subjectName = subject.name,
-                                        examTitle = title,
-                                        examEndsAtMs = endsAtMs
-                                    )
+
                                 },
                                 onUpdateExam = { examId, title, endsAtMs, maxGrade ->
                                     viewModel.updateExam(examId, title, endsAtMs, maxGrade)

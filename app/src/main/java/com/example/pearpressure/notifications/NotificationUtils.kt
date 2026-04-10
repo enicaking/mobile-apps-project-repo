@@ -17,6 +17,7 @@ object NotificationUtils {
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
             description = "Notifications shown 1 day before an exam."
+            setShowBadge(true)
         }
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
