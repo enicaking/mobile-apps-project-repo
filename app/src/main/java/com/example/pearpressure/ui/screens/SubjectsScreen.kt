@@ -20,20 +20,20 @@ import com.example.pearpressure.ui.navigation.AppRoutes
 @Composable
 fun SubjectsScreen(
     subjects: List<Subject>,
-    currentUserId: String, // Necesario para saber si eres el owner
+    currentUserId: String, // Differentiate between owner and member
 
-    onAddSubject: (String) -> Unit,
-    onOpenSubject: (String) -> Unit,
-    onActionSubject: (Subject) -> Unit, // Maneja borrar o salir
-    onUpdateSubject: (String, String) -> Unit // NEW: Callback to update the name
+    onAddSubject: (String) -> Unit, // Callback to add a new subject
+    onOpenSubject: (String) -> Unit, // Callback to open a subject
+    onActionSubject: (Subject) -> Unit, // Callback to delete or leave a subject
+    onUpdateSubject: (String, String) -> Unit // Callback to update subject name
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
 
-    // NEW: State to track which subject we are editing
+    // State to track which subject we are editing
     var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
 
-    // Estado para controlar el diálogo de confirmación de borrado/abandono
+    // State to track the dialog for confirm action: delete or leave a subject
     var subjectToAction by remember { mutableStateOf<Subject?>(null) }
 
     Column(
