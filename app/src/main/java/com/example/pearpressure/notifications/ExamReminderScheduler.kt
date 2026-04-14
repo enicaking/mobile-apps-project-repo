@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object ExamReminderScheduler {
     private const val WORK_PREFIX = "exam_reminder_"
     //private const val ONE_DAY_MS = 24L * 60 * 60 * 1000
-    private const val ONE_DAY_MS = 60_000L
+    private const val ONE_DAY_MS = 60_000L //test only, use below
 
     fun scheduleOneDayBefore(
         context: Context,
