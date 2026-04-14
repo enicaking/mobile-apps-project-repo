@@ -24,9 +24,10 @@ fun StopwatchPage(
     examTitle: String,
     examId: String, //
     endsAtEpochMs: Long,
-    onBack: () -> Unit //without {} so that mandatory
+    onBack: () -> Unit, //without {} so that mandatory
     //onback is a callback function of when you are done, do this,
     //here, when user clicks finish means done with study session, so goes back to stopwatch screen
+    onStudyStarted: () -> Unit = {}
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
     val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
@@ -81,7 +82,9 @@ fun StopwatchPage(
             examId = examId, // This allows the timer to save to the specific exam
             showTitle = false,
             bottomInfoText = infoText,
-            onBack = onBack // When they finish, they go back to the Exams screen
+            onBack = onBack, // When they finish, they go back to the Exams screen
+            onStudyStarted = onStudyStarted
+
         )
     }
 }

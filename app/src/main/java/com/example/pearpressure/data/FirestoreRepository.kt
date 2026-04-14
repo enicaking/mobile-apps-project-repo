@@ -5,11 +5,13 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
+import com.example.pearpressure.data.StudyEvent
+import kotlinx.coroutines.tasks.await
 
 class FirestoreRepository {
 
     private val db: FirebaseFirestore = Firebase.firestore
-
+    private val firestore = FirebaseFirestore.getInstance()
     // ── SUBJECTS ──────────────────────────────────────────
 
     suspend fun addSubject(subject: Subject): Result<Unit> = runCatching {
@@ -450,4 +452,10 @@ class FirestoreRepository {
             result
         }
     } catch (e: Exception) { emptyList() }
+
+    suspend fun addStudyEvent(event: StudyEvent) {
+        firestore.collection("study_events")
+            .add(event)
+            .await()
+    }
 }

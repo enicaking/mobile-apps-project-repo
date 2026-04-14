@@ -7,6 +7,11 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 
 enum class RankingScope(val label: String) {
@@ -40,6 +45,9 @@ data class OutgoingFriendRequestUi(
 )
 
 class MainViewModel : ViewModel() {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val repo = FirestoreRepository()
     private val authRepo = AuthRepository()
@@ -624,6 +632,56 @@ class MainViewModel : ViewModel() {
                 }
             }
             .onFailure { _error.value = it.message }
+    }
+
+    fun notifyStudyStarted(subjectName: String, examTitle: String) {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        val userName = when {
+            !currentUser.displayName.isNullOrBlank() -> currentUser.displayName!!
+            !currentUser.email.isNullOrBlank() -> currentUser.email!!
+            else -> "Someone"
+        }
+
+        viewModelScope.launch {
+            try {
+                val event = StudyEvent(
+                    fromUserId = userId,
+                    fromUserName = userName,
+                    subjectName = subjectName,
+                    examTitle = examTitle,
+                    startedAtEpochMs = System.currentTimeMillis()
+                )
+
+                repo.addStudyEvent(event)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun saveFcmToken(token: String) {
+        val currentUser = auth.currentUser ?: return
+        val uid = currentUser.uid
+
+        viewModelScope.launch {
+            try {
+                val updates = mapOf(
+                    "fcmToken" to token,
+                    "fcmTokenUpdatedAt" to FieldValue.serverTimestamp()
+                )
+
+                firestore.collection("users")
+                    .document(uid)
+                    .set(updates, com.google.firebase.firestore.SetOptions.merge())
+                    .await()
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
 }

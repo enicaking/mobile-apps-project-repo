@@ -18,7 +18,7 @@ import androidx.core.content.ContextCompat
 import com.example.pearpressure.notifications.NotificationUtils
 import androidx.activity.viewModels
 import com.example.pearpressure.notifications.AppFirebaseMessagingService
-
+import com.example.pearpressure.data.StudyEvent
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
@@ -64,5 +64,4 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
-
 }
