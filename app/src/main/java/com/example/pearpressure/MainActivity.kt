@@ -16,6 +16,8 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.pearpressure.notifications.NotificationUtils
+import androidx.activity.viewModels
+import com.example.pearpressure.notifications.AppFirebaseMessagingService
 
 class MainActivity : ComponentActivity() {
 
@@ -34,6 +36,10 @@ class MainActivity : ComponentActivity() {
 
         NotificationUtils.createExamReminderChannel(this)
         requestPostNotificationsPermissionIfNeeded()
+
+        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
+            viewModel.saveFcmToken(token)
+        }
 
         setContent {
             SofiaTestTheme {

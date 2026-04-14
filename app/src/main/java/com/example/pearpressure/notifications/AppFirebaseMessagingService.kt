@@ -4,6 +4,9 @@ import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 
 class AppFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -11,9 +14,18 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         Log.d(TAG, "New FCM token: $token")
 
-        // TODO:
-        // Save this token in Firestore for the currently logged-in user.
-        // We will connect this in the next step.
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val uid = currentUser.uid
+
+        val updates = mapOf(
+            "fcmToken" to token,
+            "fcmTokenUpdatedAt" to FieldValue.serverTimestamp()
+        )
+
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(uid)
+            .set(updates, com.google.firebase.firestore.SetOptions.merge())
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
