@@ -54,8 +54,10 @@ fun StopwatchScreen(
     modifier: Modifier = Modifier,
     showTitle: Boolean = true,
     bottomInfoText: String? = null,
-    onBack: () -> Unit = {}   //{} means not mandatory
-) {
+    onBack: () -> Unit = {} ,  //{} means not mandatory
+    onStudyStarted: () -> Unit = {}
+)
+{
     // -----------------------------
     // Stopwatch state
     // -----------------------------
@@ -173,14 +175,20 @@ fun StopwatchScreen(
         ) {
 
             Button(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).height(52.dp),
                 onClick = {
+                    val isFreshStart = !isRunning && displayMs == 0L
+
+                    if (isFreshStart) {
+                        onStudyStarted()
+                    }
+
                     isRunning = true
                     startElapsedMs = SystemClock.elapsedRealtime()
                 },
                 enabled = !isRunning
             ) {
-                Text(if (displayMs > 0) "Continue" else "Start")
+                Text(if (displayMs > 0L) "Resume" else "Start")
             }
 
             Button(
