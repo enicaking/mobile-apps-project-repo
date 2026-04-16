@@ -3,6 +3,9 @@ package com.example.pearpressure.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +44,11 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     val selectedSubjectId by viewModel.selectedRankingSubjectId.collectAsState()
     val entries by viewModel.rankingEntries.collectAsState()
 
+    // NEW: Collect friend and request states
+    val friends by viewModel.friends.collectAsState()
+    val outgoingRequests by viewModel.outgoingRequests.collectAsState()
+    val currentUserId = viewModel.getCurrentUserId()
+
     // UI State for Filters
     var selectedScope by remember { mutableStateOf(RankingScope.TOTAL) }
     var selectedCategory by remember { mutableStateOf(RankingCategory.HARD_WORK) }
@@ -50,6 +58,9 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     var categoryExpanded by remember { mutableStateOf(false) }
     var examExpanded by remember { mutableStateOf(false) }
     var subjectPickerExpanded by remember { mutableStateOf(false) }
+
+    // UI State for Friend Confirmation
+    var userToConfirm by remember { mutableStateOf<RankingEntryUi?>(null) }
 
     // --- AUTOMATIC REFRESH ---
     // Triggers whenever Subject, Exam, or Scope changes
@@ -197,17 +208,43 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     modifier = Modifier.weight(1f)
                 ) {
                     itemsIndexed(sortedEntries) { index, entry ->
+                        // NEW: Check friendship and request status
+                        val isFriend = friends.any { it.uid == entry.uid }
+                        val requestSent = outgoingRequests.any { it.to.uid == entry.uid }
+
                         RankingRow(
                             rank = index + 1,
                             entry = entry,
                             category = selectedCategory,
                             maxGrade = currentSelectedExam?.maxGrade ?: 10.0,
-                            isAllExams = selectedExamId == null // <--- ADD THIS
+                            isAllExams = selectedExamId == null,
+                            isCurrentUser = entry.uid == currentUserId,
+                            isAlreadyFriend = isFriend,
+                            isRequestPending = requestSent,
+                            onAddFriend = { userToConfirm = entry } // Open confirmation dialog
                         )
                     }
                 }
             }
         }
+    }
+
+    // --- FRIEND REQUEST CONFIRMATION DIALOG ---
+    userToConfirm?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { userToConfirm = null },
+            title = { Text("Add Friend") },
+            text = { Text("Do you want to send a friend request to ${entry.userName}?") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.sendFriendRequest(entry.uid)
+                    userToConfirm = null
+                }) { Text("Send") }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToConfirm = null }) { Text("Cancel") }
+            }
+        )
     }
 
     // --- SUBJECT PICKER DIALOG ---
@@ -240,7 +277,11 @@ private fun RankingRow(
     entry: RankingEntryUi,
     category: RankingCategory,
     maxGrade: Double,
-    isAllExams: Boolean // Added this to handle the "10-scale vs Real-scale" display
+    isAllExams: Boolean,
+    isCurrentUser: Boolean,
+    isAlreadyFriend: Boolean,
+    isRequestPending: Boolean,
+    onAddFriend: () -> Unit
 ) {
     // Determine Podium Colors
     val rowColor = when (rank) {
@@ -271,13 +312,35 @@ private fun RankingRow(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.width(45.dp),
-                // Make the rank number color match the medal for top 3
                 color = if (rank <= 3) borderColor else MaterialTheme.colorScheme.onSurface
             )
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Text(category.label, style = MaterialTheme.typography.bodySmall)
+            }
+
+            // --- ADD FRIEND BUTTON ---
+            if (!isCurrentUser) {
+                if (isAlreadyFriend) {
+                    // Friend already
+                } else if (isRequestPending) {
+                    IconButton(onClick = {}, enabled = false) {
+                        Icon(
+                            imageVector = Icons.Default.HourglassEmpty,
+                            contentDescription = "Pending",
+                            tint = Color.Gray
+                        )
+                    }
+                } else {
+                    IconButton(onClick = onAddFriend) {
+                        Icon(
+                            imageVector = Icons.Default.PersonAdd,
+                            contentDescription = "Add Friend",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             // --- DATA DISPLAY ---
@@ -288,7 +351,6 @@ private fun RankingRow(
 
                 RankingCategory.REALITY_GAP -> {
                     val sign = if (realityGapValue > 0) "+" else ""
-                    // If it's a specific exam, we scale the gap back to actual points
                     val displayGap = if (isAllExams) realityGapValue else realityGapValue * (maxGrade / 10.0)
                     "$sign${"%.1f".format(displayGap)} ${category.unit}"
                 }
@@ -299,9 +361,8 @@ private fun RankingRow(
 
                 RankingCategory.GRADE_ACTUAL -> {
                     if (isAllExams) {
-                        "${"%.1f".format(entry.avgActualGrade)} pts" // Global normalized sum
+                        "${"%.1f".format(entry.avgActualGrade)} pts"
                     } else {
-                        // Converts the 10-scale back to the exam's real scale (e.g. 18.0/20.0)
                         "${"%.1f".format(entry.avgActualGrade * (maxGrade / 10.0))}/$maxGrade"
                     }
                 }
@@ -343,14 +404,14 @@ private fun RankingRow(
     }
 }
 
-// FORMATTER: Now shows Hours, Minutes, and Seconds
+// FORMATTER: Now shows Hours, Minutes, and Seconds (Removed leading zeros for a cleaner look)
 private fun formatMsWithSeconds(ms: Long): String {
     val hours = ms / 3_600_000
     val minutes = (ms % 3_600_000) / 60_000
     val seconds = (ms % 60_000) / 1000
     return if (hours > 0) {
-        "%02dh %02dm %02ds".format(hours, minutes, seconds)
+        "${hours}h ${minutes}m ${seconds}s"
     } else {
-        "%02dm %02ds".format(minutes, seconds)
+        "${minutes}m ${seconds}s"
     }
 }

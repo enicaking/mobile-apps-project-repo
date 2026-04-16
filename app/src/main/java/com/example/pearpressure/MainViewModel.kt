@@ -7,8 +7,9 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-
-
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 enum class RankingScope(val label: String) {
     TOTAL("All Time"),
     WEEKLY("This Week")
@@ -73,9 +74,15 @@ class MainViewModel : ViewModel() {
     private val _incomingRequests = MutableStateFlow<List<IncomingFriendRequestUi>>(emptyList())
     val incomingRequests: StateFlow<List<IncomingFriendRequestUi>> = _incomingRequests
 
+
     private val _outgoingRequests = MutableStateFlow<List<OutgoingFriendRequestUi>>(emptyList())
+    // ADD THIS LINE BELOW - This is what the UI was looking for!
     val outgoingRequests: StateFlow<List<OutgoingFriendRequestUi>> = _outgoingRequests
 
+    // This one you already had
+    val outgoingRequestUids: StateFlow<Set<String>> = _outgoingRequests
+        .map { list -> list.map { it.to.uid }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
     // ── Study buddies (derived from subjects members/owner)
     private val _studyBuddies = MutableStateFlow<List<UserProfile>>(emptyList())
     val studyBuddies: StateFlow<List<UserProfile>> = _studyBuddies
