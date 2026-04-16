@@ -2,26 +2,29 @@ package com.example.pearpressure.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
-import com.example.pearpressure.data.FriendRequest
 import com.example.pearpressure.data.UserProfile
 import com.example.pearpressure.IncomingFriendRequestUi
 import com.example.pearpressure.OutgoingFriendRequestUi
 
 @Composable
-fun FriendsScreen(viewModel: MainViewModel = viewModel()) { // CHANGED: Added parameter & renamed 'vm' to 'viewModel'
+fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
 
     val friends by viewModel.friends.collectAsState()
     val incoming by viewModel.incomingRequests.collectAsState()
     val outgoing by viewModel.outgoingRequests.collectAsState()
-    val buddies by viewModel.studyBuddies.collectAsState()
 
     val searchError by viewModel.friendSearchError.collectAsState()
     val searchResult by viewModel.friendSearchResult.collectAsState()
@@ -30,184 +33,199 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) { // CHANGED: Added pa
     val myUid = viewModel.getCurrentUserId()
     val friendUids = remember(friends) { friends.map { it.uid }.toSet() }
 
+    // UI State for Removal Confirmation
+    var userToRemove by remember { mutableStateOf<UserProfile?>(null) }
+    // UI State for Cancel Confirmation
+    var requestToCancel by remember { mutableStateOf<OutgoingFriendRequestUi?>(null) }
+
     Scaffold { padding ->
-        Column(
-            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Friends", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            item {
+                Text("Friends", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
 
-            // Search by email
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Search by email") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Button(
-                onClick = { viewModel.searchUserByEmail(email) },
-                modifier = Modifier.fillMaxWidth().height(52.dp)
-            ) { Text("Search") }
-
-            if (searchError != null) Text(searchError!!, color = MaterialTheme.colorScheme.error)
-
-            if (searchResult != null) {
-                val u = searchResult!!
-                val canAdd = u.uid.isNotBlank() && u.uid != myUid && !friendUids.contains(u.uid)
-
-                UserCard(
-                    title = "Search result",
-                    user = u,
-                    trailing = {
-                        OutlinedButton(
-                            onClick = { viewModel.sendFriendRequest(u.uid) },
-                            enabled = canAdd
-                        ) { Text(if (u.uid == myUid) "This is you" else if (!canAdd) "Added" else "Add") }
+            // Search Section - Button now on the right to save vertical space
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Search email") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = { viewModel.searchUserByEmail(email) },
+                            modifier = Modifier.height(56.dp), // Match TextField height
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Search")
+                        }
                     }
-                )
-            }
 
-            Divider()
+                    if (searchError != null) Text(searchError!!, color = MaterialTheme.colorScheme.error)
 
-            // Incoming requests
-            SectionTitle("Incoming requests")
-            if (incoming.isEmpty()) {
-                EmptyHint("No incoming requests.")
-            } else {
-                incoming.forEach { item ->
-                    RequestCardIncoming(
-                        item = item,
-                        onAccept = { viewModel.acceptRequest(item.request) },
-                        onDecline = { viewModel.declineRequest(item.request) }
-                    )
-                }
-            }
-
-            // Outgoing requests
-            SectionTitle("Outgoing requests")
-            if (outgoing.isEmpty()) {
-                EmptyHint("No outgoing requests.")
-            } else {
-                outgoing.forEach { item ->
-                    RequestCardOutgoing(item = item)
-                }
-            }
-
-            Divider()
-
-            // Friends list
-            SectionTitle("Your friends")
-            if (friends.isEmpty()) {
-                EmptyHint("No friends yet.")
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(friends) { u ->
+                    searchResult?.let { u ->
+                        val canAdd = u.uid.isNotBlank() && u.uid != myUid && !friendUids.contains(u.uid)
                         UserCard(
-                            title = null,
+                            title = "Search result",
                             user = u,
                             trailing = {
-                                TextButton(onClick = { viewModel.removeFriend(u.uid) }) { Text("Remove") }
+                                OutlinedButton(
+                                    onClick = { viewModel.sendFriendRequest(u.uid) },
+                                    enabled = canAdd
+                                ) { Text(if (u.uid == myUid) "You" else if (!canAdd) "Added" else "Add") }
                             }
                         )
                     }
                 }
             }
 
-            Divider()
+            // --- INCOMING REQUESTS ---
+            if (incoming.isNotEmpty()) {
+                item { SectionTitle("Incoming requests", color = Color(0xFF4DB6AC)) }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(incoming) { item ->
+                            Card(modifier = Modifier.width(190.dp)) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(item.from.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text(item.from.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
 
-            // Study buddies
-            SectionTitle("Study buddies (from shared subjects)")
-            if (buddies.isEmpty()) {
-                EmptyHint("They appear when you share subjects (owner/members).")
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(buddies) { u ->
-                        UserCard(title = null, user = u, trailing = null)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                                        Button(onClick = { viewModel.acceptRequest(item.request) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("Accept", fontSize = 12.sp) }
+                                        OutlinedButton(onClick = { viewModel.declineRequest(item.request) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("Decline", fontSize = 12.sp) }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
+
+            // --- OUTGOING REQUESTS --- (Width tightened so Cancel isn't too far)
+            if (outgoing.isNotEmpty()) {
+                item { SectionTitle("Outgoing requests", color = Color(0xFF4DB6AC)) }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(outgoing) { item ->
+                            Card(
+                                modifier = Modifier.width(200.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            "Pending to:",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = Color(0xFF4DB6AC),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(item.to.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                                        Text(item.to.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                    }
+
+                                    TextButton(
+                                        onClick = { requestToCancel = item },
+                                        contentPadding = PaddingValues(start = 4.dp)
+                                    ) {
+                                        Text("Cancel", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+
+            // Friends list
+            item { SectionTitle("Your friends", color = MaterialTheme.colorScheme.primary) }
+            if (friends.isEmpty()) {
+                item { EmptyHint("No friends yet.") }
+            } else {
+                items(friends) { u ->
+                    UserCard(
+                        title = null,
+                        user = u,
+                        trailing = {
+                            TextButton(onClick = { userToRemove = u }) {
+                                Text("Remove", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    )
+                }
+            }
         }
+    }
+
+    // --- DIALOGS ---
+    userToRemove?.let { user ->
+        AlertDialog(
+            onDismissRequest = { userToRemove = null },
+            title = { Text("Remove Friend") },
+            text = { Text("Are you sure you want to remove ${user.fullName.ifBlank { user.email }}?") },
+            confirmButton = {
+                Button(onClick = { viewModel.removeFriend(user.uid); userToRemove = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Remove") }
+            },
+            dismissButton = { TextButton(onClick = { userToRemove = null }) { Text("Cancel") } }
+        )
+    }
+
+    requestToCancel?.let { item ->
+        AlertDialog(
+            onDismissRequest = { requestToCancel = null },
+            title = { Text("Cancel Request") },
+            text = { Text("Do you want to cancel the request to ${item.to.fullName}?") },
+            confirmButton = {
+                Button(onClick = { viewModel.declineRequest(item.request); requestToCancel = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Confirm") }
+            },
+            dismissButton = { TextButton(onClick = { requestToCancel = null }) { Text("Back") } }
+        )
     }
 }
 
-@Composable private fun SectionTitle(text: String) {
-    Text(text, fontWeight = FontWeight.SemiBold)
+@Composable private fun SectionTitle(text: String, color: Color) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        modifier = Modifier.padding(top = 4.dp)
+    )
 }
 
 @Composable private fun EmptyHint(text: String) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp)) {
-            Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))) {
+        Text(text, modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
-private fun RequestCardIncoming(
-    item: IncomingFriendRequestUi,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit
-) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("From:", fontWeight = FontWeight.SemiBold)
-            Text(item.from.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(item.from.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onAccept, modifier = Modifier.weight(1f)) { Text("Accept") }
-                OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f)) { Text("Decline") }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RequestCardOutgoing(item: OutgoingFriendRequestUi) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Pending to:", fontWeight = FontWeight.SemiBold)
-            Text(item.to.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(item.to.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun UserCard(
-    title: String?,
-    user: UserProfile,
-    trailing: (@Composable (() -> Unit))?
-) {
+private fun UserCard(title: String?, user: UserProfile, trailing: (@Composable (() -> Unit))?) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            if (!title.isNullOrBlank()) {
-                Text(title, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
+        Row(modifier = Modifier.padding(14.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                if (title != null) Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(user.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(user.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = user.fullName.ifBlank { "No name" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = user.email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (trailing != null) trailing()
-            }
+            if (trailing != null) trailing()
         }
     }
 }
