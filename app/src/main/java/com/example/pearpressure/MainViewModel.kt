@@ -673,7 +673,7 @@ class MainViewModel : ViewModel() {
                     startedAtEpochMs = System.currentTimeMillis()
                 )
 
-                repository.addStudyEvent(event)
+                repo.addStudyEvent(event)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

@@ -261,11 +261,16 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
 
                                 onBack = { navController.popBackStack() },
                                 onStudyStarted = {
+                                    println("DEBUG subject.id = ${subject.id}")
+                                    println("DEBUG subject.name = ${subject.name}")
+                                    println("DEBUG exam.title = ${exam.title}")
+
                                     viewModel.notifyStudyStarted(
                                         subjectId = subject.id,
                                         subjectName = subject.name,
                                         examTitle = exam.title
                                     )
+
                                 }
                             )
                         }
