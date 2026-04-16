@@ -76,8 +76,11 @@ exports.sendStudyStartedNotification = onDocumentCreated(
           subjectName,
           examTitle,
         },
+        android: {
+          priority: "high"
+        },
         tokens,
-      };
+      };;
 
       const response = await admin.messaging().sendEachForMulticast(message);
 
