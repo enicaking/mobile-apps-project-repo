@@ -1,12 +1,21 @@
 package com.example.pearpressure.notifications
 
+import android.Manifest
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
-import com.google.firebase.messaging.RemoteMessage
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import com.example.pearpressure.MainActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
 
 class AppFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -32,19 +41,53 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(message)
 
         Log.d(TAG, "Message received from: ${message.from}")
+        Log.d(TAG, "Message data: ${message.data}")
 
-        message.notification?.let { notification ->
-            Log.d(TAG, "Notification title: ${notification.title}")
-            Log.d(TAG, "Notification body: ${notification.body}")
+        val title = message.notification?.title
+            ?: message.data["title"]
+            ?: "Study notification"
+
+        val body = message.notification?.body
+            ?: message.data["body"]
+            ?: "${message.data["fromUserName"] ?: "Someone"} started studying"
+
+        showForegroundNotification(title, body)
+    }
+
+    private fun showForegroundNotification(title: String, body: String) {
+        NotificationUtils.createChannels(applicationContext)
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            val granted = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!granted) return
         }
 
-        if (message.data.isNotEmpty()) {
-            Log.d(TAG, "Message data: ${message.data}")
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
-        // TODO:
-        // In a later step, we will build and show a local notification here
-        // when the app is in the foreground.
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(applicationContext, NotificationUtils.SOCIAL_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setNumber(1)
+            .build()
+
+        NotificationManagerCompat.from(applicationContext)
+            .notify(System.currentTimeMillis().toInt(), notification)
     }
 
     companion object {

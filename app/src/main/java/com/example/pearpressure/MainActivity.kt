@@ -19,6 +19,9 @@ import com.example.pearpressure.notifications.NotificationUtils
 import androidx.activity.viewModels
 import com.example.pearpressure.notifications.AppFirebaseMessagingService
 import com.example.pearpressure.data.StudyEvent
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
@@ -26,21 +29,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // hace que la interfaz pueda ocupar más pantalla, llegando hasta los bordes
+        enableEdgeToEdge()
 
-        lifecycleScope.launch {
-            viewModel.error.collect { err ->
-                err?.let { Log.e("Firebase", "Error: $it") }
-            }
-        } //Esto escucha errores del ViewModel y los manda al log.
-
-        NotificationUtils.createExamReminderChannel(this)
+        NotificationUtils.createChannels(this)
         requestPostNotificationsPermissionIfNeeded()
 
-
+        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
+            viewModel.saveFcmToken(token)
+        }
 
         setContent {
-            SofiaTestTheme {
+            SofiaTestTheme() {
                 TestApp(viewModel = viewModel)
             }
         }
