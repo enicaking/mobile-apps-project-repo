@@ -12,6 +12,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import com.example.pearpressure.notifications.AppFirebaseMessagingService
+import android.util.Log
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.FirebaseMessaging
 
 
 enum class RankingScope(val label: String) {
@@ -203,6 +209,12 @@ class MainViewModel : ViewModel() {
             }
         }
     }
+    //FCM
+    private fun fetchAndSaveFcmToken() {
+        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
+            saveFcmToken(token)
+        }
+    }
 
     // ── Auth
 
@@ -212,6 +224,7 @@ class MainViewModel : ViewModel() {
                 user?.uid?.let {
                     startListening(it)
                     loadCurrentUserProfile()
+                    fetchAndSaveFcmToken()
                 }
                 onSuccess()
             }
@@ -226,6 +239,7 @@ class MainViewModel : ViewModel() {
                 if (user != null) {
                     _needsProfileCompletion.value = true
                     onProfileStepRequired()
+                    fetchAndSaveFcmToken()
                 }
             }
             .onFailure { _error.value = it.message }
@@ -634,7 +648,11 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    fun notifyStudyStarted(subjectName: String, examTitle: String) {
+    fun notifyStudyStarted(
+        subjectId: String,
+        subjectName: String,
+        examTitle: String
+    ) {
         val currentUser = auth.currentUser ?: return
         val userId = currentUser.uid
 
@@ -649,13 +667,13 @@ class MainViewModel : ViewModel() {
                 val event = StudyEvent(
                     fromUserId = userId,
                     fromUserName = userName,
+                    subjectId = subjectId,
                     subjectName = subjectName,
                     examTitle = examTitle,
                     startedAtEpochMs = System.currentTimeMillis()
                 )
 
-                repo.addStudyEvent(event)
-
+                repository.addStudyEvent(event)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -663,8 +681,13 @@ class MainViewModel : ViewModel() {
     }
 
     fun saveFcmToken(token: String) {
-        val currentUser = auth.currentUser ?: return
+        val currentUser = auth.currentUser ?: run {
+            android.util.Log.d("FCM", "No authenticated user, token not saved")
+            return
+        }
+
         val uid = currentUser.uid
+        android.util.Log.d("FCM", "Saving token for uid=$uid")
 
         viewModelScope.launch {
             try {
@@ -678,8 +701,9 @@ class MainViewModel : ViewModel() {
                     .set(updates, com.google.firebase.firestore.SetOptions.merge())
                     .await()
 
+                android.util.Log.d("FCM", "Token saved successfully")
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("FCM", "Error saving token", e)
             }
         }
     }

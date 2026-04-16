@@ -140,7 +140,10 @@ class FirestoreRepository {
 
     suspend fun saveCompletedUserProfile(user: UserProfile): Result<Unit> = runCatching {
         val normalizedUser = user.copy(username = user.username.trim().lowercase())
-        db.collection("users").document(user.uid).set(normalizedUser).await()
+        db.collection("users")
+            .document(user.uid)
+            .set(normalizedUser, com.google.firebase.firestore.SetOptions.merge())
+            .await()
     }
 
 
