@@ -21,9 +21,8 @@ import com.example.pearpressure.RankingScope
 // 2. Ranking Types (Dropdown)
 enum class RankingCategory(val label: String, val unit: String) {
     HARD_WORK("Hard Work (Time)", ""),
-    REALITY_GAP("Reality Gap", "pts"),
+    REALITY_GAP("Your Guess", "pts"),
     STUDY_EFFICIENCY("Study Efficiency", "pts/hr"), // UPDATED NAME
-    EFFICIENCY("Efficiency", "pts/hr"), // Keep for compatibility
     HABIT_WATER("Water Intake", "glasses"),
     HABIT_COFFEE("Coffee Consumed", "cups"),
     HABIT_ENERGY("Energy Drinks", "cans"),
@@ -187,7 +186,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 when (selectedCategory) {
                     RankingCategory.HARD_WORK -> entries.sortedByDescending { it.totalStudyTimeMs }
                     RankingCategory.REALITY_GAP -> entries.sortedByDescending { it.avgActualGrade - it.avgExpectedGrade }
-                    RankingCategory.STUDY_EFFICIENCY, RankingCategory.EFFICIENCY -> entries.sortedByDescending { it.efficiencyScore }
+                    RankingCategory.STUDY_EFFICIENCY -> entries.sortedByDescending { it.efficiencyScore }
                     RankingCategory.HABIT_WATER -> entries.sortedByDescending { it.totalWater }
                     RankingCategory.HABIT_COFFEE -> entries.sortedByDescending { it.totalCoffee }
                     RankingCategory.HABIT_ENERGY -> entries.sortedByDescending { it.totalEnergy }
@@ -355,7 +354,7 @@ private fun RankingRow(
                     "$sign${"%.1f".format(displayGap)} ${category.unit}"
                 }
 
-                RankingCategory.STUDY_EFFICIENCY, RankingCategory.EFFICIENCY -> {
+                RankingCategory.STUDY_EFFICIENCY -> {
                     "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
                 }
 
