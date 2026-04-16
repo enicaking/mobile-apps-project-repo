@@ -37,9 +37,7 @@ class MainActivity : ComponentActivity() {
         NotificationUtils.createExamReminderChannel(this)
         requestPostNotificationsPermissionIfNeeded()
 
-        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
-            viewModel.saveFcmToken(token)
-        }
+
 
         setContent {
             SofiaTestTheme {
