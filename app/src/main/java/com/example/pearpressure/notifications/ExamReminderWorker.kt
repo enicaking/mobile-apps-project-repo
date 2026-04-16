@@ -37,7 +37,7 @@ class ExamReminderWorker(
         val examTitle = inputData.getString(KEY_EXAM_TITLE) ?: "Exam"
         val endsAtMs = inputData.getLong(KEY_EXAM_ENDS_AT_MS, 0L)
 
-        NotificationUtils.createExamReminderChannel(applicationContext)
+        NotificationUtils.createChannels(applicationContext)
 
         val endsAtText = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
             .format(Date(endsAtMs))
