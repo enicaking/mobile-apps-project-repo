@@ -7,9 +7,19 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+import com.example.pearpressure.notifications.AppFirebaseMessagingService
+import android.util.Log
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.FirebaseMessaging
+
+
 enum class RankingScope(val label: String) {
     TOTAL("All Time"),
     WEEKLY("This Week")
@@ -41,6 +51,9 @@ data class OutgoingFriendRequestUi(
 )
 
 class MainViewModel : ViewModel() {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val repo = FirestoreRepository()
     private val authRepo = AuthRepository()
@@ -74,15 +87,9 @@ class MainViewModel : ViewModel() {
     private val _incomingRequests = MutableStateFlow<List<IncomingFriendRequestUi>>(emptyList())
     val incomingRequests: StateFlow<List<IncomingFriendRequestUi>> = _incomingRequests
 
-
     private val _outgoingRequests = MutableStateFlow<List<OutgoingFriendRequestUi>>(emptyList())
-    // ADD THIS LINE BELOW - This is what the UI was looking for!
     val outgoingRequests: StateFlow<List<OutgoingFriendRequestUi>> = _outgoingRequests
 
-    // This one you already had
-    val outgoingRequestUids: StateFlow<Set<String>> = _outgoingRequests
-        .map { list -> list.map { it.to.uid }.toSet() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
     // ── Study buddies (derived from subjects members/owner)
     private val _studyBuddies = MutableStateFlow<List<UserProfile>>(emptyList())
     val studyBuddies: StateFlow<List<UserProfile>> = _studyBuddies
@@ -202,6 +209,12 @@ class MainViewModel : ViewModel() {
             }
         }
     }
+    //FCM
+    private fun fetchAndSaveFcmToken() {
+        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
+            saveFcmToken(token)
+        }
+    }
 
     // ── Auth
 
@@ -211,6 +224,7 @@ class MainViewModel : ViewModel() {
                 user?.uid?.let {
                     startListening(it)
                     loadCurrentUserProfile()
+                    fetchAndSaveFcmToken()
                 }
                 onSuccess()
             }
@@ -225,6 +239,7 @@ class MainViewModel : ViewModel() {
                 if (user != null) {
                     _needsProfileCompletion.value = true
                     onProfileStepRequired()
+                    fetchAndSaveFcmToken()
                 }
             }
             .onFailure { _error.value = it.message }
@@ -596,29 +611,23 @@ class MainViewModel : ViewModel() {
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
                     val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
 
-                    // Helper para normalizar a escala de 10
+                    // Helper to normalize grades to a scale of 10 for fair comparison
                     fun normalize(value: Double?, max: Double): Double {
                         val actualMax = if (max <= 0.0) 10.0 else max
                         return ((value ?: 0.0) / actualMax) * 10.0
                     }
 
-                    // LOGICA: Usamos .average() para que sea la nota media sobre 10
-                    val avgActualNormalized = if (completedExams.isNotEmpty()) {
-                        completedExams.map { normalize(it.actualGrades[userId], it.maxGrade) }.average()
-                    } else 0.0
+                    // We sum the NORMALIZED points so a 100pt exam doesn't break the ranking logic
+                    val sumActualNormalized = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
+                    val sumExpectedNormalized = completedExams.sumOf { normalize(it.expectedGrades[userId], it.maxGrade) }
 
-                    val avgExpectedNormalized = if (completedExams.isNotEmpty()) {
-                        completedExams.map { normalize(it.expectedGrades[userId], it.maxGrade) }.average()
-                    } else 0.0
+                    val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
 
-                    val avgSleep = if (completedExams.isNotEmpty()) {
-                        completedExams.map { it.sleepHours[userId] ?: 0.0 }.average()
-                    } else 0.0
                     // --- STUDY EFFICIENCY ---
                     val totalHours = totalMs / 3600000.0
 
                     // Efficiency is now (Normalized Points / Hours) for a fair leaderboard
-                    val efficiency = if (totalHours > 0.0027) avgActualNormalized / totalHours else 0.0
+                    val efficiency = if (totalHours > 0.0027) sumActualNormalized / totalHours else 0.0
 
                     RankingEntryUi(
                         uid = userId,
@@ -631,12 +640,72 @@ class MainViewModel : ViewModel() {
                         totalEnergy = energy,
                         totalBathroom = bathroom,
                         avgSleep = avgSleep,
-                        avgActualGrade = avgActualNormalized, // Normalized AVERAGE
-                        avgExpectedGrade = avgExpectedNormalized // Normalized AVERAGE
+                        avgActualGrade = sumActualNormalized, // Normalized SUM
+                        avgExpectedGrade = sumExpectedNormalized // Normalized SUM
                     )
                 }
             }
             .onFailure { _error.value = it.message }
+    }
+
+    fun notifyStudyStarted(
+        subjectId: String,
+        subjectName: String,
+        examTitle: String
+    ) {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        val userName = when {
+            !currentUser.displayName.isNullOrBlank() -> currentUser.displayName!!
+            !currentUser.email.isNullOrBlank() -> currentUser.email!!
+            else -> "Someone"
+        }
+
+        viewModelScope.launch {
+            try {
+                val event = StudyEvent(
+                    fromUserId = userId,
+                    fromUserName = userName,
+                    subjectId = subjectId,
+                    subjectName = subjectName,
+                    examTitle = examTitle,
+                    startedAtEpochMs = System.currentTimeMillis()
+                )
+
+                repository.addStudyEvent(event)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun saveFcmToken(token: String) {
+        val currentUser = auth.currentUser ?: run {
+            android.util.Log.d("FCM", "No authenticated user, token not saved")
+            return
+        }
+
+        val uid = currentUser.uid
+        android.util.Log.d("FCM", "Saving token for uid=$uid")
+
+        viewModelScope.launch {
+            try {
+                val updates = mapOf(
+                    "fcmToken" to token,
+                    "fcmTokenUpdatedAt" to FieldValue.serverTimestamp()
+                )
+
+                firestore.collection("users")
+                    .document(uid)
+                    .set(updates, com.google.firebase.firestore.SetOptions.merge())
+                    .await()
+
+                android.util.Log.d("FCM", "Token saved successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("FCM", "Error saving token", e)
+            }
+        }
     }
 
 }
