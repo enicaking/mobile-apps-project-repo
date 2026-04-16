@@ -596,23 +596,29 @@ class MainViewModel : ViewModel() {
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
                     val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
 
-                    // Helper to normalize grades to a scale of 10 for fair comparison
+                    // Helper para normalizar a escala de 10
                     fun normalize(value: Double?, max: Double): Double {
                         val actualMax = if (max <= 0.0) 10.0 else max
                         return ((value ?: 0.0) / actualMax) * 10.0
                     }
 
-                    // We sum the NORMALIZED points so a 100pt exam doesn't break the ranking logic
-                    val sumActualNormalized = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
-                    val sumExpectedNormalized = completedExams.sumOf { normalize(it.expectedGrades[userId], it.maxGrade) }
+                    // LOGICA: Usamos .average() para que sea la nota media sobre 10
+                    val avgActualNormalized = if (completedExams.isNotEmpty()) {
+                        completedExams.map { normalize(it.actualGrades[userId], it.maxGrade) }.average()
+                    } else 0.0
 
-                    val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
+                    val avgExpectedNormalized = if (completedExams.isNotEmpty()) {
+                        completedExams.map { normalize(it.expectedGrades[userId], it.maxGrade) }.average()
+                    } else 0.0
 
+                    val avgSleep = if (completedExams.isNotEmpty()) {
+                        completedExams.map { it.sleepHours[userId] ?: 0.0 }.average()
+                    } else 0.0
                     // --- STUDY EFFICIENCY ---
                     val totalHours = totalMs / 3600000.0
 
                     // Efficiency is now (Normalized Points / Hours) for a fair leaderboard
-                    val efficiency = if (totalHours > 0.0027) sumActualNormalized / totalHours else 0.0
+                    val efficiency = if (totalHours > 0.0027) avgActualNormalized / totalHours else 0.0
 
                     RankingEntryUi(
                         uid = userId,
@@ -625,8 +631,8 @@ class MainViewModel : ViewModel() {
                         totalEnergy = energy,
                         totalBathroom = bathroom,
                         avgSleep = avgSleep,
-                        avgActualGrade = sumActualNormalized, // Normalized SUM
-                        avgExpectedGrade = sumExpectedNormalized // Normalized SUM
+                        avgActualGrade = avgActualNormalized, // Normalized AVERAGE
+                        avgExpectedGrade = avgExpectedNormalized // Normalized AVERAGE
                     )
                 }
             }
