@@ -61,6 +61,13 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     // UI State for Friend Confirmation
     var userToConfirm by remember { mutableStateOf<RankingEntryUi?>(null) }
 
+    // CARGA AUTOMÁTICA DE EXÁMENES
+    // Si ya hay una asignatura seleccionada al entrar, cargamos sus exámenes
+    LaunchedEffect(selectedSubjectId) {
+        selectedSubjectId?.let { id ->
+            viewModel.loadExams(id)
+        }
+    }
     // --- AUTOMATIC REFRESH ---
     // Triggers whenever Subject, Exam, or Scope changes
     LaunchedEffect(selectedSubjectId, selectedExamId, selectedScope) {
@@ -257,7 +264,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                         OutlinedButton(
                             onClick = {
                                 viewModel.selectRankingSubject(s.id)
-                                viewModel.loadExams(s.id)
+                                //viewModel.loadExams(s.id)
                                 subjectPickerExpanded = false
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -315,7 +322,21 @@ private fun RankingRow(
             )
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                // INSERTED STREAK NEXT TO USERNAME (ALWAYS VISIBLE)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Logic: Orange if streak > 0, LightGray if 0
+                    val streakColor = if (entry.currentStreak > 0) Color(0xFFFF9800) else Color.LightGray
+                    Text(
+                        text = "🔥${entry.currentStreak}",
+                        fontWeight = FontWeight.Bold,
+                        color = streakColor,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 Text(category.label, style = MaterialTheme.typography.bodySmall)
             }
 

@@ -31,7 +31,9 @@ data class UserProfile(
     val sex: String = "",
     val birthdayEpochMs: Long = 0L,
     val email: String = "",
-    val totalStudyTime: Long = 0L
+    val totalStudyTime: Long = 0L,
+    val currentStreak: Int = 0,
+    val lastStudyDateMs: Long = 0L      
 )
 
 data class FriendRequest(
@@ -58,16 +60,4 @@ data class Session(
     var coffeeCount: Int = 0,     // cantidad de cafés
     var energyDrinkCount: Int = 0, // cantidad de bebidas energéticas
     var bathroomBreaks: Int = 0    // cantidad de veces al baño (poop)
-)
-// UI-only model for the Ranking Screen
-data class RankingEntryUi(
-    val uid: String,
-    val userName: String,
-    val totalStudyTimeMs: Long,
-    val avgAccuracy: Double = 0.0, // (Actual - Expected) difference
-    val efficiencyScore: Double = 0.0, // Grade / Hours
-    val totalWater: Int = 0,
-    val totalCoffee: Int = 0,
-    val totalEnergy: Int = 0,
-    val totalBathroom: Int = 0
 )

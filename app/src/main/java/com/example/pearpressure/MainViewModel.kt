@@ -30,7 +30,8 @@ data class RankingEntryUi(
     val totalBathroom: Int = 0,
     val avgSleep: Double = 0.0,
     val avgExpectedGrade: Double = 0.0,
-    val avgActualGrade: Double = 0.0
+    val avgActualGrade: Double = 0.0,
+    val currentStreak: Int = 0
 )
 
 data class IncomingFriendRequestUi(
@@ -548,6 +549,10 @@ class MainViewModel : ViewModel() {
         bathroom: Int = 0
     ) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
+        val profile = _currentUserProfile.value ?: return@launch // Necesitamos el perfil actual
+
+        // 1. Calcular nueva racha
+        val newStreak = calculateNewStreak(profile.currentStreak, profile.lastStudyDateMs)
 
         val session = Session(
             ownerId = userId,
@@ -560,12 +565,17 @@ class MainViewModel : ViewModel() {
             bathroomBreaks = bathroom
         )
 
+        // 2. Guardar sesión y actualizar perfil (Racha + Tiempo total)
         repo.addSession(session).onFailure { _error.value = it.message }
 
-        repo.updateUserTotalStudyTime(userId, durationMs)
+        // mEtodo en el repo que actualice racha y fecha
+        repo.updateUserStreakAndStats(userId, durationMs, newStreak, System.currentTimeMillis())
+            .onSuccess {
+                // RECARGA AUTOMÁTICA TRAS ESTUDIAR
+                loadCurrentUserProfile() // Recargar para ver el fueguito en la UI
+                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
+            }
             .onFailure { _error.value = it.message }
-
-        loadCurrentUserProfile()
     }
 
     fun updateSubjectName(subjectId: String, newName: String) = viewModelScope.launch {
@@ -588,15 +598,10 @@ class MainViewModel : ViewModel() {
         examId: String? = null,
         scope: RankingScope = RankingScope.TOTAL
     ) = viewModelScope.launch {
-        val subjectId = _selectedRankingSubjectId.value ?: run {
-            _rankingEntries.value = emptyList()
-            return@launch
-        }
+        // 1. Obtenemos el ID sin vaciar la lista actual para evitar el "salto" visual
+        val subjectId = _selectedRankingSubjectId.value ?: return@launch
 
-        val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: run {
-            _rankingEntries.value = emptyList()
-            return@launch
-        }
+        val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: return@launch
 
         val exams = repo.getExamsBySubjectSync(subjectId)
 
@@ -648,15 +653,17 @@ class MainViewModel : ViewModel() {
                         uid = userId,
                         userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
                         totalStudyTimeMs = totalMs,
-                        avgAccuracy = 0.0,
+                        currentStreak = profile.currentStreak, // <-- streak
+                        avgAccuracy = 0.0, // Deprecated in favor of Reality Gap
                         efficiencyScore = efficiency,
                         totalWater = water,
                         totalCoffee = coffee,
                         totalEnergy = energy,
                         totalBathroom = bathroom,
                         avgSleep = avgSleep,
-                        avgActualGrade = sumActualNormalized,
-                        avgExpectedGrade = sumExpectedNormalized
+                        avgActualGrade = sumActualNormalized, // Normalized SUM
+                        avgExpectedGrade = sumExpectedNormalized // Normalized SUM
+
                     )
                 }
             }
@@ -723,4 +730,33 @@ class MainViewModel : ViewModel() {
             }
         }
     }
+
+
+
+    //CALCULATE STREAK FUNCTION
+    private fun calculateNewStreak(currentStreak: Int, lastDateMs: Long): Int {
+        if (lastDateMs == 0L) return 1 // Primera vez que estudia
+
+        val now = System.currentTimeMillis()
+        val dayMs = 24 * 60 * 60 * 1000L
+
+        // Usamos calendarios para comparar días naturales (no solo 24h exactas)
+        val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
+        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDateMs }
+
+        val isSameDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
+
+        // Es el día siguiente si la diferencia es de 1 día
+        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        val isNextDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
+
+        return when {
+            isSameDay -> currentStreak // Ya cumplió hoy, mantenemos racha
+            isNextDay -> currentStreak + 1 // ¡Aumenta la racha!
+            else -> 1 // Han pasado más de 48h, racha rota. Volvemos a 1.
+        }
+    }
+
 }
