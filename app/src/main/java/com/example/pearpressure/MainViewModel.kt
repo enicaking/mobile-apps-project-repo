@@ -543,11 +543,14 @@ class MainViewModel : ViewModel() {
         // 2. Guardar sesión y actualizar perfil (Racha + Tiempo total)
         repo.addSession(session).onFailure { _error.value = it.message }
 
-        // Necesitas añadir un método en el repo que actualice racha y fecha
+        // mEtodo en el repo que actualice racha y fecha
         repo.updateUserStreakAndStats(userId, durationMs, newStreak, System.currentTimeMillis())
+            .onSuccess {
+                // RECARGA AUTOMÁTICA TRAS ESTUDIAR
+                loadCurrentUserProfile() // Recargar para ver el fueguito en la UI
+                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
+            }
             .onFailure { _error.value = it.message }
-
-        loadCurrentUserProfile() // Recargar para ver el fueguito en la UI
     }
 
     // Update logic for Subjects and Exams
@@ -574,13 +577,10 @@ class MainViewModel : ViewModel() {
         examId: String? = null,
         scope: RankingScope = RankingScope.TOTAL
     ) = viewModelScope.launch {
-        val subjectId = _selectedRankingSubjectId.value ?: run {
-            _rankingEntries.value = emptyList(); return@launch
-        }
+        // 1. Obtenemos el ID sin vaciar la lista actual para evitar el "salto" visual
+        val subjectId = _selectedRankingSubjectId.value ?: return@launch
 
-        val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: run {
-            _rankingEntries.value = emptyList(); return@launch
-        }
+        val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: return@launch
 
         // 1. Get all exams for this subject
         val exams = repo.getExamsBySubjectSync(subjectId)
