@@ -670,10 +670,12 @@ class MainViewModel : ViewModel() {
                     subjectId = subjectId,
                     subjectName = subjectName,
                     examTitle = examTitle,
-                    startedAtEpochMs = System.currentTimeMillis()
+                    startedAtEpochMs = System.currentTimeMillis(),
+                    type = "study_started"
                 )
 
                 repo.addStudyEvent(event)
+
             } catch (e: Exception) {
                 e.printStackTrace()
             }
