@@ -27,6 +27,10 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
+import com.example.pearpressure.notifications.CounterNotificationHelper
+
 
 private object QuickIcons {
     val Water: ImageVector = Icons.Filled.WaterDrop
@@ -122,6 +126,7 @@ fun StopwatchScreen(
     var waterInput by remember { mutableStateOf("") }
     var waterError by remember { mutableStateOf<String?>(null) }
 
+
     val onQuickAction: (String) -> Unit = { action ->
         when (action) {
             "poop" -> showPoopConfirm = true
@@ -134,6 +139,15 @@ fun StopwatchScreen(
             }
         }
     }
+
+
+    val context = LocalContext.current
+
+    var coffeeWarningShown by rememberSaveable { mutableStateOf(false) }
+    var boostWarningShown by rememberSaveable { mutableStateOf(false) }
+
+    val subjectNameForNotification = "Mobile Applications"
+    val examTitleForNotification = "Project"
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -187,6 +201,12 @@ fun StopwatchScreen(
 
                         isRunning = true
                         startElapsedMs = SystemClock.elapsedRealtime()
+
+                        CounterNotificationHelper.scheduleWaterReminder(
+                            context = context.applicationContext,
+                            subjectName = subjectNameForNotification,
+                            examTitle = examTitleForNotification
+                        )
                     },
                     enabled = !isRunning
                 ) {
@@ -211,6 +231,8 @@ fun StopwatchScreen(
                             accumulatedMs = displayMs
                             isRunning = false
                         }
+
+                        CounterNotificationHelper.cancelWaterReminder(context.applicationContext)
 
                         lastSavedTime = displayMs
                         lastSavedCoffee = coffeeCounts.values.sum()
@@ -237,6 +259,9 @@ fun StopwatchScreen(
                         waterTotalLiters = 0.0
                         coffeeCounts.clear()
                         boostCounts.clear()
+
+                        coffeeWarningShown = false
+                        boostWarningShown = false
                     },
                     enabled = displayMs > 0
                 ) {
@@ -432,6 +457,16 @@ fun StopwatchScreen(
             confirmButton = {
                 Button(onClick = {
                     coffeeCounts[selectedCoffeeType] = (coffeeCounts[selectedCoffeeType] ?: 0) + 1
+
+                    val newCoffeeTotal = coffeeCounts.values.sum()
+                    if (newCoffeeTotal > 2 && !coffeeWarningShown) {
+                        CounterNotificationHelper.showCoffeeWarning(
+                            context = context.applicationContext,
+                            coffeeTotal = newCoffeeTotal
+                        )
+                        coffeeWarningShown = true
+                    }
+
                     showCoffeeDialog = false
                 }) { Text("Add") }
             },
@@ -470,6 +505,16 @@ fun StopwatchScreen(
             confirmButton = {
                 Button(onClick = {
                     boostCounts[selectedBoostType] = (boostCounts[selectedBoostType] ?: 0) + 1
+
+                    val newBoostTotal = boostCounts.values.sum()
+                    if (newBoostTotal > 1 && !boostWarningShown) {
+                        CounterNotificationHelper.showBoostWarning(
+                            context = context.applicationContext,
+                            boostTotal = newBoostTotal
+                        )
+                        boostWarningShown = true
+                    }
+
                     showBoostDialog = false
                 }) { Text("Add") }
             },
@@ -511,7 +556,15 @@ fun StopwatchScreen(
                         waterError = "Please enter a valid number > 0"
                         return@Button
                     }
+
                     waterTotalLiters += parsed
+
+                    CounterNotificationHelper.scheduleWaterReminder(
+                        context = context.applicationContext,
+                        subjectName = subjectNameForNotification,
+                        examTitle = examTitleForNotification
+                    )
+
                     showWaterDialog = false
                     scope.launch {
                         snackbarHostState.showSnackbar("Added ${formatLiters(parsed)}")
