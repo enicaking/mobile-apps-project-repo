@@ -43,28 +43,6 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "Message received from: ${message.from}")
         Log.d(TAG, "Message data: ${message.data}")
 
-        val type = message.data["type"] ?: "study_start"
-
-        when (type) {
-            "study_start" -> handleStudyStartNotification(message)
-            "ranking_overtake" -> handleRankingOvertakeNotification(message)
-            else -> {
-                Log.d(TAG, "Unknown notification type: $type")
-
-                val title = message.notification?.title
-                    ?: message.data["title"]
-                    ?: "Notification"
-
-                val body = message.notification?.body
-                    ?: message.data["body"]
-                    ?: "You have a new notification"
-
-                showForegroundNotification(title, body)
-            }
-        }
-    }
-
-    private fun handleStudyStartNotification(message: RemoteMessage) {
         val title = message.notification?.title
             ?: message.data["title"]
             ?: "Study notification"
@@ -72,21 +50,6 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val body = message.notification?.body
             ?: message.data["body"]
             ?: "${message.data["fromUserName"] ?: "Someone"} started studying"
-
-        showForegroundNotification(title, body)
-    }
-
-    private fun handleRankingOvertakeNotification(message: RemoteMessage) {
-        val overtakerName = message.data["overtakerName"] ?: "Someone"
-        val subjectName = message.data["subjectName"] ?: "your subject"
-
-        val title = message.notification?.title
-            ?: message.data["title"]
-            ?: "Ranking update"
-
-        val body = message.notification?.body
-            ?: message.data["body"]
-            ?: "$overtakerName has overtaken you in $subjectName"
 
         showForegroundNotification(title, body)
     }
@@ -114,10 +77,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(
-            applicationContext,
-            NotificationUtils.SOCIAL_CHANNEL_ID
-        )
+        val notification = NotificationCompat.Builder(applicationContext, NotificationUtils.SOCIAL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
