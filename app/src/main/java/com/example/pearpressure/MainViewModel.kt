@@ -7,34 +7,27 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import com.example.pearpressure.notifications.AppFirebaseMessagingService
-import android.util.Log
-import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.messaging.FirebaseMessaging
-
 
 enum class RankingScope(val label: String) {
     TOTAL("All Time"),
     WEEKLY("This Week")
 }
+
 data class RankingEntryUi(
     val uid: String,
     val userName: String,
     val totalStudyTimeMs: Long,
-    val avgAccuracy: Double = 0.0,      // Margin of error
-    val efficiencyScore: Double = 0.0, // Grade / Hour
+    val avgAccuracy: Double = 0.0,
+    val efficiencyScore: Double = 0.0,
     val totalWater: Int = 0,
     val totalCoffee: Int = 0,
     val totalEnergy: Int = 0,
     val totalBathroom: Int = 0,
-    //just general average sleep, expected and real grades:
     val avgSleep: Double = 0.0,
     val avgExpectedGrade: Double = 0.0,
     val avgActualGrade: Double = 0.0
@@ -48,6 +41,12 @@ data class IncomingFriendRequestUi(
 data class OutgoingFriendRequestUi(
     val request: FriendRequest,
     val to: UserProfile
+)
+
+data class ExamParticipantUi(
+    val uid: String,
+    val displayName: String,
+    val studiedTimeMs: Long
 )
 
 class MainViewModel : ViewModel() {
@@ -70,14 +69,14 @@ class MainViewModel : ViewModel() {
     private val _needsProfileCompletion = MutableStateFlow(false)
     val needsProfileCompletion: StateFlow<Boolean> = _needsProfileCompletion
 
-    // ── Ranking
+    // Ranking
     private val _selectedRankingSubjectId = MutableStateFlow<String?>(null)
     val selectedRankingSubjectId: StateFlow<String?> = _selectedRankingSubjectId
 
     private val _rankingEntries = MutableStateFlow<List<RankingEntryUi>>(emptyList())
     val rankingEntries: StateFlow<List<RankingEntryUi>> = _rankingEntries
 
-    // ── Friends (real friends)
+    // Friends
     private val _friends = MutableStateFlow<List<UserProfile>>(emptyList())
     val friends: StateFlow<List<UserProfile>> = _friends
 
@@ -90,11 +89,11 @@ class MainViewModel : ViewModel() {
     private val _outgoingRequests = MutableStateFlow<List<OutgoingFriendRequestUi>>(emptyList())
     val outgoingRequests: StateFlow<List<OutgoingFriendRequestUi>> = _outgoingRequests
 
-    // ── Study buddies (derived from subjects members/owner)
+    // Study buddies
     private val _studyBuddies = MutableStateFlow<List<UserProfile>>(emptyList())
     val studyBuddies: StateFlow<List<UserProfile>> = _studyBuddies
 
-    // ── Search
+    // Search
     private val _friendSearchResult = MutableStateFlow<UserProfile?>(null)
     val friendSearchResult: StateFlow<UserProfile?> = _friendSearchResult
 
@@ -106,20 +105,21 @@ class MainViewModel : ViewModel() {
     val currentUserProfile: StateFlow<UserProfile?> = _currentUserProfile
 
     // Sessions
-
     private val _sessions = MutableStateFlow<List<Session>>(emptyList())
     val sessions: StateFlow<List<Session>> = _sessions
+
+    // Exam participants for Stopwatch
+    private val _examParticipants = MutableStateFlow<List<ExamParticipantUi>>(emptyList())
+    val examParticipants: StateFlow<List<ExamParticipantUi>> = _examParticipants
 
     private var sessionsListener: ListenerRegistration? = null
 
     // listeners
     private var subjectsListeners: List<ListenerRegistration> = emptyList()
     private var examsListener: ListenerRegistration? = null
-
     private var friendsListener: ListenerRegistration? = null
     private var incomingReqListener: ListenerRegistration? = null
     private var outgoingReqListener: ListenerRegistration? = null
-
 
     init {
         authRepo.currentUser?.uid?.let { startListening(it) }
@@ -130,13 +130,11 @@ class MainViewModel : ViewModel() {
     fun getCurrentUserEmail(): String = authRepo.currentUser?.email ?: "No email"
 
     private fun startListening(userId: String) {
-        // stop old listeners
         subjectsListeners.forEach { it.remove() }
         friendsListener?.remove()
         incomingReqListener?.remove()
         outgoingReqListener?.remove()
 
-        // subjects (owner + member)
         subjectsListeners = repo.listenToSubjectsForUser(userId) { updatedList ->
             _subjects.value = updatedList
 
@@ -145,22 +143,18 @@ class MainViewModel : ViewModel() {
             }
 
             refreshStudyBuddiesFromSubjects()
-
-            //Pass default arguments to match the  function signature
             loadRanking(examId = null, scope = RankingScope.TOTAL)
         }
 
-        // friends + requests
         startFriendsListeners(userId)
 
-        // sessions
         sessionsListener?.remove()
         sessionsListener = repo.listenToSessionsForUser(userId) {
             _sessions.value = it
         }
+
         loadCurrentUserProfile()
     }
-
 
     private fun startFriendsListeners(userId: String) {
         friendsListener?.remove()
@@ -209,14 +203,15 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-    //FCM
+
+    // FCM
     private fun fetchAndSaveFcmToken() {
         AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
             saveFcmToken(token)
         }
     }
 
-    // ── Auth
+    // Auth
 
     fun signIn(email: String, pass: String, onSuccess: () -> Unit) = viewModelScope.launch {
         authRepo.signIn(email, pass)
@@ -262,6 +257,7 @@ class MainViewModel : ViewModel() {
         _outgoingRequests.value = emptyList()
         _studyBuddies.value = emptyList()
         _currentUserProfile.value = null
+        _examParticipants.value = emptyList()
 
         _selectedRankingSubjectId.value = null
         _friendSearchResult.value = null
@@ -270,7 +266,7 @@ class MainViewModel : ViewModel() {
         onSuccess()
     }
 
-    // ── Exams/Subjects
+    // Exams / Subjects
 
     fun loadExams(subjectId: String) {
         examsListener?.remove()
@@ -288,19 +284,58 @@ class MainViewModel : ViewModel() {
 
     fun addExam(subjectId: String, title: String, endsAtMs: Long, maxGrade: Double) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
-        repo.addExam(Exam(
-            subjectId = subjectId,
-            ownerId = userId,
-            title = title,
-            endsAtEpochMs = endsAtMs,
-            maxGrade = maxGrade // THIS SAVES IT TO DB
-        )).onFailure { _error.value = it.message }
+        repo.addExam(
+            Exam(
+                subjectId = subjectId,
+                ownerId = userId,
+                title = title,
+                endsAtEpochMs = endsAtMs,
+                maxGrade = maxGrade
+            )
+        ).onFailure { _error.value = it.message }
     }
-    fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
-    //Esto se usa para mostrar el nombre de la asignatura arriba del crono.
-    fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
-    //Sirve para recuperar el examen elegido cuando vas a abrir el cronómetro.
 
+    fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
+
+    fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
+
+    fun loadExamParticipants(examId: String) = viewModelScope.launch {
+        val exam = _exams.value.firstOrNull { it.id == examId } ?: run {
+            _examParticipants.value = emptyList()
+            return@launch
+        }
+
+        val subject = _subjects.value.firstOrNull { it.id == exam.subjectId } ?: run {
+            _examParticipants.value = emptyList()
+            return@launch
+        }
+
+        val participantUids = (listOf(subject.ownerId) + subject.members)
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        val examSessions = repo.getSessionsForExamsSync(listOf(examId))
+
+        repo.getUserProfilesByIds(participantUids)
+            .onSuccess { profiles ->
+                _examParticipants.value = profiles
+                    .map { profile ->
+                        val studiedMs = examSessions
+                            .filter { it.ownerId == profile.uid }
+                            .sumOf { it.durationMs }
+
+                        ExamParticipantUi(
+                            uid = profile.uid,
+                            displayName = profile.username.ifBlank {
+                                profile.fullName.ifBlank { profile.email }
+                            },
+                            studiedTimeMs = studiedMs
+                        )
+                    }
+                    .sortedByDescending { it.studiedTimeMs }
+            }
+            .onFailure { _error.value = it.message }
+    }
 
     fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
         val currentUserId = authRepo.currentUser?.uid ?: return@launch
@@ -320,16 +355,15 @@ class MainViewModel : ViewModel() {
         repo.deleteExam(examId).onFailure { _error.value = it.message }
     }
 
-    // ── Ranking
+    // Ranking
 
     fun selectRankingSubject(subjectId: String) {
         _selectedRankingSubjectId.value = subjectId
-        // this line fetches the exams so the dropdown has data immediately
         loadExams(subjectId)
         loadRanking(examId = null, scope = RankingScope.TOTAL)
     }
 
-    // ── Study buddies (from subjects)
+    // Study buddies
 
     private fun refreshStudyBuddiesFromSubjects() = viewModelScope.launch {
         val currentUid = authRepo.currentUser?.uid ?: return@launch
@@ -345,7 +379,7 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    // ── Friends actions
+    // Friends actions
 
     fun searchUserByEmail(email: String) = viewModelScope.launch {
         _friendSearchError.value = null
@@ -387,6 +421,7 @@ class MainViewModel : ViewModel() {
     }
 
     // Profile
+
     fun loadCurrentUserProfile() {
         val uid = authRepo.currentUser?.uid ?: return
 
@@ -402,7 +437,6 @@ class MainViewModel : ViewModel() {
     fun getCurrentUserTime(): Long =
         currentUserProfile.value?.totalStudyTime ?: 0L
 
-
     override fun onCleared() {
         subjectsListeners.forEach { it.remove() }
         examsListener?.remove()
@@ -412,8 +446,6 @@ class MainViewModel : ViewModel() {
         sessionsListener?.remove()
         super.onCleared()
     }
-
-
 
     fun completeUserProfile(
         fullName: String,
@@ -484,8 +516,6 @@ class MainViewModel : ViewModel() {
 
     fun shouldCompleteProfile(): Boolean = _needsProfileCompletion.value
 
-    // ── Adding member actions
-
     fun searchFriends(query: String) {
         val currentFriends = _friends.value
 
@@ -500,20 +530,15 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    // Función requerida por ExamsScreen en TestApp ---
     fun saveExamResults(examId: String, expected: Double?, sleep: Double?, actual: Double?) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
-        // To change wrong info, the user just submits new values.
-        // To "delete", we assume the UI will allow passing null/empty.
         repo.updateExamStats(examId, userId, expected, sleep, actual)
             .onSuccess {
-                // Refresh data so the Ranking changes immediately
                 loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
             }
             .onFailure { _error.value = it.message }
     }
 
-    //FUNCTION TO SAVE SESSION
     fun saveSession(
         examId: String,
         durationMs: Long,
@@ -534,17 +559,15 @@ class MainViewModel : ViewModel() {
             energyDrinkCount = energy,
             bathroomBreaks = bathroom
         )
-        // Add session into firestore
+
         repo.addSession(session).onFailure { _error.value = it.message }
 
-        // Add this session to user's total study time
         repo.updateUserTotalStudyTime(userId, durationMs)
             .onFailure { _error.value = it.message }
 
-        loadCurrentUserProfile() // Refresh so that the totals are updated
+        loadCurrentUserProfile()
     }
 
-    // Update logic for Subjects and Exams
     fun updateSubjectName(subjectId: String, newName: String) = viewModelScope.launch {
         val cleaned = newName.trim()
         if (cleaned.isEmpty()) return@launch
@@ -554,42 +577,37 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long, newMaxGrade: Double) = viewModelScope.launch {
-        // Keep your check: don't allow empty titles
         val cleaned = newTitle.trim()
         if (cleaned.isEmpty()) return@launch
 
-        // Pass the newMaxGrade to the repo so it actually updates in Firestore
         repo.updateExam(examId, cleaned, newEndsAtMs, newMaxGrade)
             .onFailure { _error.value = it.message }
     }
 
-    // ALL THE RANKING LOGIC HERE
     fun loadRanking(
         examId: String? = null,
         scope: RankingScope = RankingScope.TOTAL
     ) = viewModelScope.launch {
         val subjectId = _selectedRankingSubjectId.value ?: run {
-            _rankingEntries.value = emptyList(); return@launch
+            _rankingEntries.value = emptyList()
+            return@launch
         }
 
         val subject = _subjects.value.firstOrNull { it.id == subjectId } ?: run {
-            _rankingEntries.value = emptyList(); return@launch
+            _rankingEntries.value = emptyList()
+            return@launch
         }
 
-        // 1. Get all exams for this subject
         val exams = repo.getExamsBySubjectSync(subjectId)
 
-        // 2. FILTER SESSIONS BASED ON SELECTION
         val examIds = if (examId != null) listOf(examId) else exams.map { it.id }
         var sessions = repo.getSessionsForExamsSync(examIds)
 
-        // Apply Weekly Filter if selected
         if (scope == RankingScope.WEEKLY) {
             val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
             sessions = sessions.filter { it.createdAtEpochMs >= oneWeekAgo }
         }
 
-        // 3. Get all member profiles
         val memberUids = (listOf(subject.ownerId) + subject.members)
             .filter { it.isNotBlank() }
             .distinct()
@@ -600,48 +618,45 @@ class MainViewModel : ViewModel() {
                     val userId = profile.uid
                     val userSessions = sessions.filter { it.ownerId == userId }
 
-                    // --- HABITS & TIME ---
                     val totalMs = userSessions.sumOf { it.durationMs }
                     val water = userSessions.sumOf { it.waterCount }
                     val coffee = userSessions.sumOf { it.coffeeCount }
                     val energy = userSessions.sumOf { it.energyDrinkCount }
                     val bathroom = userSessions.sumOf { it.bathroomBreaks }
 
-                    // --- EXAM DATA ---
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
                     val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
 
-                    // Helper to normalize grades to a scale of 10 for fair comparison
                     fun normalize(value: Double?, max: Double): Double {
                         val actualMax = if (max <= 0.0) 10.0 else max
                         return ((value ?: 0.0) / actualMax) * 10.0
                     }
 
-                    // We sum the NORMALIZED points so a 100pt exam doesn't break the ranking logic
                     val sumActualNormalized = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
                     val sumExpectedNormalized = completedExams.sumOf { normalize(it.expectedGrades[userId], it.maxGrade) }
 
-                    val avgSleep = if (completedExams.isNotEmpty()) completedExams.map { it.sleepHours[userId] ?: 0.0 }.average() else 0.0
+                    val avgSleep = if (completedExams.isNotEmpty()) {
+                        completedExams.map { it.sleepHours[userId] ?: 0.0 }.average()
+                    } else {
+                        0.0
+                    }
 
-                    // --- STUDY EFFICIENCY ---
                     val totalHours = totalMs / 3600000.0
-
-                    // Efficiency is now (Normalized Points / Hours) for a fair leaderboard
                     val efficiency = if (totalHours > 0.0027) sumActualNormalized / totalHours else 0.0
 
                     RankingEntryUi(
                         uid = userId,
                         userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
                         totalStudyTimeMs = totalMs,
-                        avgAccuracy = 0.0, // Deprecated in favor of Reality Gap
+                        avgAccuracy = 0.0,
                         efficiencyScore = efficiency,
                         totalWater = water,
                         totalCoffee = coffee,
                         totalEnergy = energy,
                         totalBathroom = bathroom,
                         avgSleep = avgSleep,
-                        avgActualGrade = sumActualNormalized, // Normalized SUM
-                        avgExpectedGrade = sumExpectedNormalized // Normalized SUM
+                        avgActualGrade = sumActualNormalized,
+                        avgExpectedGrade = sumExpectedNormalized
                     )
                 }
             }
@@ -675,7 +690,6 @@ class MainViewModel : ViewModel() {
                 )
 
                 repo.addStudyEvent(event)
-
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -709,5 +723,4 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-
 }

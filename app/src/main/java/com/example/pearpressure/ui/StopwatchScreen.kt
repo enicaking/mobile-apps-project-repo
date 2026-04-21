@@ -2,11 +2,13 @@ package com.example.pearpressure.ui
 
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +18,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,9 +25,9 @@ import com.example.pearpressure.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
-/** Change icons here later (single place). */
 private object QuickIcons {
     val Water: ImageVector = Icons.Filled.WaterDrop
     val Coffee: ImageVector = Icons.Filled.LocalCafe
@@ -54,19 +55,14 @@ fun StopwatchScreen(
     modifier: Modifier = Modifier,
     showTitle: Boolean = true,
     bottomInfoText: String? = null,
-    onBack: () -> Unit = {} ,  //{} means not mandatory
+    onBack: () -> Unit = {},
     onStudyStarted: () -> Unit = {}
-)
-{
-    // -----------------------------
-    // Stopwatch state
-    // -----------------------------
+) {
     var isRunning by remember { mutableStateOf(false) }
     var startElapsedMs by remember { mutableStateOf(0L) }
     var accumulatedMs by remember { mutableStateOf(0L) }
     var displayMs by remember { mutableStateOf(0L) }
 
-    // --- Summary Dialog States ---
     var showSummary by remember { mutableStateOf(false) }
     var lastSavedTime by remember { mutableStateOf(0L) }
     var lastSavedCoffee by remember { mutableStateOf(0) }
@@ -75,9 +71,20 @@ fun StopwatchScreen(
     var lastSavedPoop by remember { mutableStateOf(0) }
 
     val allSessions by viewModel.sessions.collectAsState()
+    val examParticipants by viewModel.examParticipants.collectAsState()
+    val friends by viewModel.friends.collectAsState()
+    val outgoingRequests by viewModel.outgoingRequests.collectAsState()
 
     val sessions = remember(allSessions, examId) {
         allSessions.filter { it.examId == examId }
+    }
+
+    val currentUserId = viewModel.getCurrentUserId()
+    val friendIds = remember(friends) { friends.map { it.uid }.toSet() }
+    val pendingRequestIds = remember(outgoingRequests) { outgoingRequests.map { it.to.uid }.toSet() }
+
+    LaunchedEffect(examId, allSessions.size) {
+        viewModel.loadExamParticipants(examId)
     }
 
     LaunchedEffect(isRunning, startElapsedMs, accumulatedMs) {
@@ -92,9 +99,6 @@ fun StopwatchScreen(
         }
     }
 
-    // -----------------------------
-    // Quick actions state
-    // -----------------------------
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -107,7 +111,6 @@ fun StopwatchScreen(
     val coffeeTotal = coffeeCounts.values.sum()
     val boostTotal = boostCounts.values.sum()
 
-    // Dialog state
     var showPoopConfirm by remember { mutableStateOf(false) }
     var showCoffeeDialog by remember { mutableStateOf(false) }
     var selectedCoffeeType by remember { mutableStateOf(CoffeeType.LATTE) }
@@ -119,10 +122,9 @@ fun StopwatchScreen(
     var waterInput by remember { mutableStateOf("") }
     var waterError by remember { mutableStateOf<String?>(null) }
 
-    // Central handler
     val onQuickAction: (String) -> Unit = { action ->
         when (action) {
-            "poop" -> { showPoopConfirm = true }
+            "poop" -> showPoopConfirm = true
             "coffee" -> showCoffeeDialog = true
             "boost" -> showBoostDialog = true
             "water" -> {
@@ -133,206 +135,228 @@ fun StopwatchScreen(
         }
     }
 
-    // -----------------------------
-    // UI
-    // -----------------------------
-    Column(
-        modifier = modifier
-            .padding(16.dp)
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(
+            modifier = modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
 
-        if (showTitle) {
-            Text(
-                text = "Stopwatch",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Time")
+            if (showTitle) {
                 Text(
-                    text = formatDuration(displayMs),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontFamily = FontFamily.Monospace
+                    text = "Stopwatch",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
-        }
 
-        if (!bottomInfoText.isNullOrBlank()) {
-            Text(bottomInfoText)
-        }
-
-        // -----------------------------
-        // Controls
-        // -----------------------------
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-
-            Button(
-                modifier = Modifier.weight(1f).height(52.dp),
-                onClick = {
-                    val isFreshStart = !isRunning && displayMs == 0L
-
-                    if (isFreshStart) {
-                        onStudyStarted()
-                    }
-
-                    isRunning = true
-                    startElapsedMs = SystemClock.elapsedRealtime()
-                },
-                enabled = !isRunning
-            ) {
-                Text(if (displayMs > 0L) "Resume" else "Start")
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Time")
+                    Text(
+                        text = formatDuration(displayMs),
+                        style = MaterialTheme.typography.displaySmall,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
             }
 
-            Button(
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    accumulatedMs = displayMs
-                    isRunning = false
-                },
-                enabled = isRunning
-            ) {
-                Text("Pause")
+            if (!bottomInfoText.isNullOrBlank()) {
+                Text(bottomInfoText)
             }
 
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    if (isRunning) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    onClick = {
+                        val isFreshStart = !isRunning && displayMs == 0L
+
+                        if (isFreshStart) {
+                            onStudyStarted()
+                        }
+
+                        isRunning = true
+                        startElapsedMs = SystemClock.elapsedRealtime()
+                    },
+                    enabled = !isRunning
+                ) {
+                    Text(if (displayMs > 0L) "Resume" else "Start")
+                }
+
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
                         accumulatedMs = displayMs
                         isRunning = false
-                    }
+                    },
+                    enabled = isRunning
+                ) {
+                    Text("Pause")
+                }
 
-                    // 1. Store current counts for Summary Dialog
-                    lastSavedTime = displayMs
-                    lastSavedCoffee = coffeeCounts.values.sum()
-                    lastSavedWater = waterTotalLiters
-                    lastSavedBoost = boostCounts.values.sum()
-                    lastSavedPoop = poopCount
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (isRunning) {
+                            accumulatedMs = displayMs
+                            isRunning = false
+                        }
 
-                    val waterGlasses = (waterTotalLiters / 0.25).toInt()
+                        lastSavedTime = displayMs
+                        lastSavedCoffee = coffeeCounts.values.sum()
+                        lastSavedWater = waterTotalLiters
+                        lastSavedBoost = boostCounts.values.sum()
+                        lastSavedPoop = poopCount
 
-                    // 2. 🔥 SAVE TO FIRESTORE
-                    viewModel.saveSession(
-                        examId = examId,
-                        durationMs = displayMs,
-                        water = waterGlasses,
-                        coffee = lastSavedCoffee,
-                        energy = lastSavedBoost,
-                        bathroom = lastSavedPoop
-                    )
+                        val waterGlasses = (waterTotalLiters / 0.25).toInt()
 
-                    // 3. Show Success Summary
-                    showSummary = true
+                        viewModel.saveSession(
+                            examId = examId,
+                            durationMs = displayMs,
+                            water = waterGlasses,
+                            coffee = lastSavedCoffee,
+                            energy = lastSavedBoost,
+                            bathroom = lastSavedPoop
+                        )
 
-                    // 4. Reset local UI
-                    accumulatedMs = 0L
-                    displayMs = 0L
-                    poopCount = 0
-                    waterTotalLiters = 0.0
-                    coffeeCounts.clear()
-                    boostCounts.clear()
-                },
-                enabled = displayMs > 0
-            ) {
-                Text("Finish")
+                        showSummary = true
+
+                        accumulatedMs = 0L
+                        displayMs = 0L
+                        poopCount = 0
+                        waterTotalLiters = 0.0
+                        coffeeCounts.clear()
+                        boostCounts.clear()
+                    },
+                    enabled = displayMs > 0
+                ) {
+                    Text("Finish")
+                }
             }
-        }
 
-        // Quick actions
-        Text(
-            text = "Quick actions",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            QuickActionButton(
-                modifier = Modifier.weight(1f),
-                emoji = "💩",
-                title = "Poop",
-                subtitle = poopCount.toString(),
-                onClick = { onQuickAction("poop") }
-            )
-
-            QuickActionButton(
-                modifier = Modifier.weight(1f),
-                icon = QuickIcons.Water,
-                title = "Water",
-                subtitle = formatLiters(waterTotalLiters),
-                onClick = { onQuickAction("water") }
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            QuickActionButton(
-                modifier = Modifier.weight(1f),
-                icon = QuickIcons.Coffee,
-                title = "Coffee",
-                subtitle = coffeeTotal.toString(),
-                onClick = { onQuickAction("coffee") }
-            )
-
-            QuickActionButton(
-                modifier = Modifier.weight(1f),
-                icon = QuickIcons.Boost,
-                title = "Boost",
-                subtitle = boostTotal.toString(),
-                onClick = { onQuickAction("boost") }
-            )
-        }
-
-        // History
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Text(
-                text = "History",
+                text = "Quick actions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    emoji = "💩",
+                    title = "Poop",
+                    subtitle = poopCount.toString(),
+                    onClick = { onQuickAction("poop") }
+                )
+
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Water,
+                    title = "Water",
+                    subtitle = formatLiters(waterTotalLiters),
+                    onClick = { onQuickAction("water") }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Coffee,
+                    title = "Coffee",
+                    subtitle = coffeeTotal.toString(),
+                    onClick = { onQuickAction("coffee") }
+                )
+
+                QuickActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = QuickIcons.Boost,
+                    title = "Boost",
+                    subtitle = boostTotal.toString(),
+                    onClick = { onQuickAction("boost") }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "History",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            if (sessions.isEmpty()) {
+                Text("No sessions yet")
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    sessions
+                        .sortedByDescending { it.createdAtEpochMs }
+                        .forEach { s ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(
+                                        text = formatDuration(s.durationMs),
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = formatDateTime(s.createdAtEpochMs),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                }
+            }
+
+            Text(
+                text = "Participants",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )
-        }
 
-        if (sessions.isEmpty()) {
-            Text("No sessions yet")
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(sessions.sortedByDescending { it.createdAtEpochMs }) { s ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = formatDuration(s.durationMs),
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = formatDateTime(s.createdAtEpochMs),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+            if (examParticipants.isEmpty()) {
+                Text("No participants found")
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    examParticipants.forEach { participant ->
+                        val isSelf = participant.uid == currentUserId
+                        val isFriend = participant.uid in friendIds
+                        val isPending = participant.uid in pendingRequestIds
+
+                        ParticipantStudyCard(
+                            name = participant.displayName,
+                            studiedTimeText = formatStudyTimeCompact(participant.studiedTimeMs),
+                            showAddFriend = !isSelf && !isFriend && !isPending,
+                            showPending = !isSelf && !isFriend && isPending,
+                            onAddFriend = { viewModel.sendFriendRequest(participant.uid) }
+                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 
-    // -----------------------------
-    // SUCCESS SUMMARY DIALOG
-    // -----------------------------
     if (showSummary) {
         AlertDialog(
             onDismissRequest = { showSummary = false },
@@ -362,20 +386,23 @@ fun StopwatchScreen(
         )
     }
 
-    // --- Poop Dialog ---
     if (showPoopConfirm) {
         AlertDialog(
             onDismissRequest = { showPoopConfirm = false },
             title = { Text("Confirm") },
             text = { Text("Are you sure you want to add 1 poop?") },
             confirmButton = {
-                Button(onClick = { poopCount += 1; showPoopConfirm = false }) { Text("Add") }
+                Button(onClick = {
+                    poopCount += 1
+                    showPoopConfirm = false
+                }) { Text("Add") }
             },
-            dismissButton = { OutlinedButton(onClick = { showPoopConfirm = false }) { Text("Cancel") } }
+            dismissButton = {
+                OutlinedButton(onClick = { showPoopConfirm = false }) { Text("Cancel") }
+            }
         )
     }
 
-    // --- Coffee Dialog ---
     if (showCoffeeDialog) {
         AlertDialog(
             onDismissRequest = { showCoffeeDialog = false },
@@ -383,12 +410,21 @@ fun StopwatchScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     CoffeeType.entries.forEach { type ->
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = (selectedCoffeeType == type), onClick = { selectedCoffeeType = type })
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (selectedCoffeeType == type),
+                                onClick = { selectedCoffeeType = type }
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text(type.label)
                             Spacer(Modifier.weight(1f))
-                            Text((coffeeCounts[type] ?: 0).toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                (coffeeCounts[type] ?: 0).toString(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -399,11 +435,12 @@ fun StopwatchScreen(
                     showCoffeeDialog = false
                 }) { Text("Add") }
             },
-            dismissButton = { OutlinedButton(onClick = { showCoffeeDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                OutlinedButton(onClick = { showCoffeeDialog = false }) { Text("Cancel") }
+            }
         )
     }
 
-    // --- Boost Dialog ---
     if (showBoostDialog) {
         AlertDialog(
             onDismissRequest = { showBoostDialog = false },
@@ -411,12 +448,21 @@ fun StopwatchScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     BoostType.entries.forEach { type ->
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = (selectedBoostType == type), onClick = { selectedBoostType = type })
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (selectedBoostType == type),
+                                onClick = { selectedBoostType = type }
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text(type.label)
                             Spacer(Modifier.weight(1f))
-                            Text((boostCounts[type] ?: 0).toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                (boostCounts[type] ?: 0).toString(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -427,11 +473,12 @@ fun StopwatchScreen(
                     showBoostDialog = false
                 }) { Text("Add") }
             },
-            dismissButton = { OutlinedButton(onClick = { showBoostDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                OutlinedButton(onClick = { showBoostDialog = false }) { Text("Cancel") }
+            }
         )
     }
 
-    // --- Water Dialog ---
     if (showWaterDialog) {
         AlertDialog(
             onDismissRequest = { showWaterDialog = false },
@@ -440,33 +487,43 @@ fun StopwatchScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = waterInput,
-                        onValueChange = { waterInput = it; waterError = null },
+                        onValueChange = {
+                            waterInput = it
+                            waterError = null
+                        },
                         label = { Text("Liters (e.g. 0.5)") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     if (waterError != null) {
-                        Text(text = waterError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = waterError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             },
             confirmButton = {
                 Button(onClick = {
                     val parsed = waterInput.trim().replace(",", ".").toDoubleOrNull()
-                    if (parsed == null || parsed <= 0.0) { waterError = "Please enter a valid number > 0"; return@Button }
+                    if (parsed == null || parsed <= 0.0) {
+                        waterError = "Please enter a valid number > 0"
+                        return@Button
+                    }
                     waterTotalLiters += parsed
                     showWaterDialog = false
-                    scope.launch { snackbarHostState.showSnackbar("Added ${formatLiters(parsed)}") }
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Added ${formatLiters(parsed)}")
+                    }
                 }) { Text("Add") }
             },
-            dismissButton = { OutlinedButton(onClick = { showWaterDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                OutlinedButton(onClick = { showWaterDialog = false }) { Text("Cancel") }
+            }
         )
     }
 }
-
-// -----------------------------
-// Helpers
-// -----------------------------
 
 @Composable
 private fun QuickActionButton(
@@ -482,15 +539,82 @@ private fun QuickActionButton(
         onClick = onClick,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                if (icon != null) Icon(imageVector = icon, contentDescription = title, modifier = Modifier.size(16.dp))
-                else if (!emoji.isNullOrBlank()) Text(text = emoji, style = TextStyle(fontSize = 16.sp, lineHeight = 16.sp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier.size(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else if (!emoji.isNullOrBlank()) {
+                    Text(
+                        text = emoji,
+                        style = TextStyle(fontSize = 16.sp, lineHeight = 16.sp)
+                    )
+                }
             }
+
             Spacer(Modifier.width(10.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                if (!subtitle.isNullOrBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                if (!subtitle.isNullOrBlank()) {
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ParticipantStudyCard(
+    name: String,
+    studiedTimeText: String,
+    showAddFriend: Boolean,
+    showPending: Boolean,
+    onAddFriend: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = studiedTimeText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            when {
+                showPending -> {
+                    OutlinedButton(onClick = {}, enabled = false) {
+                        Text("Pending")
+                    }
+                }
+
+                showAddFriend -> {
+                    FilledTonalButton(onClick = onAddFriend) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = "Add friend")
+                        Spacer(Modifier.width(6.dp))
+                        Text("Add friend")
+                    }
+                }
             }
         }
     }
@@ -510,4 +634,16 @@ private fun formatDateTime(epochMs: Long): String {
 
 private fun formatLiters(liters: Double): String {
     return String.format(Locale.getDefault(), "%.1f L", liters)
+}
+
+private fun formatStudyTimeCompact(ms: Long): String {
+    val totalMinutes = ms / 60000
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m studied"
+        minutes > 0 -> "${minutes}m studied"
+        else -> "Less than 1 min studied"
+    }
 }
