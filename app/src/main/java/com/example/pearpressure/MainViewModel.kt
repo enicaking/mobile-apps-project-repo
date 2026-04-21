@@ -37,7 +37,8 @@ data class RankingEntryUi(
     //just general average sleep, expected and real grades:
     val avgSleep: Double = 0.0,
     val avgExpectedGrade: Double = 0.0,
-    val avgActualGrade: Double = 0.0
+    val avgActualGrade: Double = 0.0,
+    val currentStreak: Int = 0
 )
 
 data class IncomingFriendRequestUi(
@@ -523,6 +524,10 @@ class MainViewModel : ViewModel() {
         bathroom: Int = 0
     ) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
+        val profile = _currentUserProfile.value ?: return@launch // Necesitamos el perfil actual
+
+        // 1. Calcular nueva racha
+        val newStreak = calculateNewStreak(profile.currentStreak, profile.lastStudyDateMs)
 
         val session = Session(
             ownerId = userId,
@@ -534,14 +539,15 @@ class MainViewModel : ViewModel() {
             energyDrinkCount = energy,
             bathroomBreaks = bathroom
         )
-        // Add session into firestore
+
+        // 2. Guardar sesión y actualizar perfil (Racha + Tiempo total)
         repo.addSession(session).onFailure { _error.value = it.message }
 
-        // Add this session to user's total study time
-        repo.updateUserTotalStudyTime(userId, durationMs)
+        // Necesitas añadir un método en el repo que actualice racha y fecha
+        repo.updateUserStreakAndStats(userId, durationMs, newStreak, System.currentTimeMillis())
             .onFailure { _error.value = it.message }
 
-        loadCurrentUserProfile() // Refresh so that the totals are updated
+        loadCurrentUserProfile() // Recargar para ver el fueguito en la UI
     }
 
     // Update logic for Subjects and Exams
@@ -633,6 +639,7 @@ class MainViewModel : ViewModel() {
                         uid = userId,
                         userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
                         totalStudyTimeMs = totalMs,
+                        currentStreak = profile.currentStreak, // <-- streak
                         avgAccuracy = 0.0, // Deprecated in favor of Reality Gap
                         efficiencyScore = efficiency,
                         totalWater = water,
@@ -642,6 +649,7 @@ class MainViewModel : ViewModel() {
                         avgSleep = avgSleep,
                         avgActualGrade = sumActualNormalized, // Normalized SUM
                         avgExpectedGrade = sumExpectedNormalized // Normalized SUM
+
                     )
                 }
             }
@@ -707,6 +715,34 @@ class MainViewModel : ViewModel() {
             } catch (e: Exception) {
                 android.util.Log.e("FCM", "Error saving token", e)
             }
+        }
+    }
+
+
+
+    //CALCULATE STREAK FUNCTION
+    private fun calculateNewStreak(currentStreak: Int, lastDateMs: Long): Int {
+        if (lastDateMs == 0L) return 1 // Primera vez que estudia
+
+        val now = System.currentTimeMillis()
+        val dayMs = 24 * 60 * 60 * 1000L
+
+        // Usamos calendarios para comparar días naturales (no solo 24h exactas)
+        val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
+        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDateMs }
+
+        val isSameDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
+
+        // Es el día siguiente si la diferencia es de 1 día
+        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        val isNextDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
+
+        return when {
+            isSameDay -> currentStreak // Ya cumplió hoy, mantenemos racha
+            isNextDay -> currentStreak + 1 // ¡Aumenta la racha!
+            else -> 1 // Han pasado más de 48h, racha rota. Volvemos a 1.
         }
     }
 

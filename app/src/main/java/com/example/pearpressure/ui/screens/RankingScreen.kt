@@ -315,7 +315,19 @@ private fun RankingRow(
             )
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                // INSERTED STREAK NEXT TO USERNAME
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    if (entry.currentStreak > 0) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "🔥${entry.currentStreak}",
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFF9800),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
                 Text(category.label, style = MaterialTheme.typography.bodySmall)
             }
 

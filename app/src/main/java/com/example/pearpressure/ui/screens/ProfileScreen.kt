@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Whatshot //FOR STREAK
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color // FOR COLOR
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.MainViewModel
@@ -31,6 +33,9 @@ fun ProfileScreen(
     val email = currentUserProfile?.email ?: viewModel.getCurrentUserEmail()
     val username = currentUserProfile?.username ?: "No username"
     val totalStudyTime = currentUserProfile?.totalStudyTime ?: 0L
+    // Recuperamos la racha del perfil
+    val streak = currentUserProfile?.currentStreak ?: 0
+
 
     Column(
         modifier = Modifier
@@ -74,6 +79,33 @@ fun ProfileScreen(
         )
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        // MOSTRAR RACHA (AHORA SIEMPRE VISIBLE)
+        val streakColor = if (streak > 0) Color(0xFFFF9800) else Color.Gray
+
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = streakColor.copy(alpha = 0.1f)
+            ),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Whatshot,
+                    contentDescription = null,
+                    tint = streakColor
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (streak > 0) "Study Streak: $streak days 🔥" else "No active streak. Start today! ❄️",
+                    color = streakColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
 
         Text(
             text = "Total time studied: ${formatStudyTime(totalStudyTime)}",

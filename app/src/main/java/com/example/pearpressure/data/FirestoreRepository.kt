@@ -461,4 +461,30 @@ class FirestoreRepository {
             .add(event)
             .await()
     }
+
+
+
+    // STREAKS & STATS UPDATES
+    //Actualiza el tiempo total, la racha actual y la fecha del último estudio en una sola operación.
+    suspend fun updateUserStreakAndStats(
+        userId: String,
+        addedMs: Long,
+        newStreak: Int,
+        lastDateMs: Long
+    ): Result<Unit> = runCatching {
+        val docRef = db.collection("users").document(userId)
+        val updates = mapOf(
+            "totalStudyTime" to com.google.firebase.firestore.FieldValue.increment(addedMs),
+            "currentStreak" to newStreak,
+            "lastStudyDateMs" to lastDateMs
+        )
+        docRef.update(updates).await()
+    }
+
+    //Resetea la racha a cero. Útil cuando detectamos que han pasado más de 48h.
+    suspend fun resetUserStreak(userId: String): Result<Unit> = runCatching {
+        db.collection("users").document(userId)
+            .update("currentStreak", 0)
+            .await()
+    }
 }
