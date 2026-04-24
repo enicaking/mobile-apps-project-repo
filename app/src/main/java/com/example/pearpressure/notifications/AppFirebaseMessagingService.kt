@@ -43,6 +43,31 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "Message received from: ${message.from}")
         Log.d(TAG, "Message data: ${message.data}")
 
+        val type = message.data["type"] ?: "study_start"
+
+        when (type) {
+            "study_start" -> handleStudyStartNotification(message)
+            "ranking_overtake" -> handleRankingOvertakeNotification(message)
+            else -> {
+                val title = message.notification?.title
+                    ?: message.data["title"]
+                    ?: "Notification"
+
+                val body = message.notification?.body
+                    ?: message.data["body"]
+                    ?: "You have a new notification"
+
+                showForegroundNotification(
+                    title = title,
+                    body = body,
+                    useHeadsUp = false,
+                    badgeNumber = 1
+                )
+            }
+        }
+    }
+
+    private fun handleStudyStartNotification(message: RemoteMessage) {
         val title = message.notification?.title
             ?: message.data["title"]
             ?: "Study notification"
@@ -51,10 +76,40 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             ?: message.data["body"]
             ?: "${message.data["fromUserName"] ?: "Someone"} started studying"
 
-        showForegroundNotification(title, body)
+        showForegroundNotification(
+            title = title,
+            body = body,
+            useHeadsUp = false,
+            badgeNumber = 1
+        )
     }
 
-    private fun showForegroundNotification(title: String, body: String) {
+    private fun handleRankingOvertakeNotification(message: RemoteMessage) {
+        val overtakerName = message.data["overtakerName"] ?: "Someone"
+        val subjectName = message.data["subjectName"] ?: "your subject"
+
+        val title = message.notification?.title
+            ?: message.data["title"]
+            ?: "Ranking update"
+
+        val body = message.notification?.body
+            ?: message.data["body"]
+            ?: "$overtakerName has overtaken you in $subjectName"
+
+        showForegroundNotification(
+            title = title,
+            body = body,
+            useHeadsUp = true,
+            badgeNumber = 1
+        )
+    }
+
+    private fun showForegroundNotification(
+        title: String,
+        body: String,
+        useHeadsUp: Boolean = false,
+        badgeNumber: Int = 1
+    ) {
         NotificationUtils.createChannels(applicationContext)
 
         if (Build.VERSION.SDK_INT >= 33) {
@@ -77,13 +132,29 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(applicationContext, NotificationUtils.SOCIAL_CHANNEL_ID)
+        val channelId = if (useHeadsUp) {
+            NotificationUtils.HEADS_UP_CHANNEL_ID
+        } else {
+            NotificationUtils.STANDARD_CHANNEL_ID
+        }
+
+        val priority = if (useHeadsUp) {
+            NotificationCompat.PRIORITY_HIGH
+        } else {
+            NotificationCompat.PRIORITY_DEFAULT
+        }
+
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
-            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setNumber(1)
+            .setAutoCancel(true)
+            .setPriority(priority)
+            .setDefaults(if (useHeadsUp) NotificationCompat.DEFAULT_ALL else 0)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setNumber(badgeNumber)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .build()
 
         NotificationManagerCompat.from(applicationContext)
