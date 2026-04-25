@@ -37,32 +37,60 @@ class ExamReminderWorker(
         val examTitle = inputData.getString(KEY_EXAM_TITLE) ?: "Exam"
         val endsAtMs = inputData.getLong(KEY_EXAM_ENDS_AT_MS, 0L)
 
+        val reminderType = inputData.getString(KEY_REMINDER_TYPE) ?: TYPE_ONE_DAY_BEFORE
+
         NotificationUtils.createChannels(applicationContext)
 
         val endsAtText = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
             .format(Date(endsAtMs))
 
+        val isExamFinished = reminderType == TYPE_EXAM_FINISHED
+
+        val title = if (isExamFinished) {
+            "Exam finished"
+        } else {
+            "Exam tomorrow: $examTitle"
+        }
+
+        val body = if (isExamFinished) {
+            "Add your expected grade for $examTitle"
+        } else {
+            "$subjectName • Ends at $endsAtText"
+        }
+
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+            if (isExamFinished) {
+                putExtra("open_post_exam", true)
+                putExtra("exam_id", examId)
+            }
         }
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
-            0,
+            examId.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(
             applicationContext,
-            NotificationUtils.STANDARD_CHANNEL_ID
+            NotificationUtils.EXAM_CHANNEL_ID
         )
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Exam tomorrow: $examTitle")
-            .setContentText("$subjectName • Ends at $endsAtText")
+            .setContentTitle(title)
+            .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(
+                if (isExamFinished) NotificationCompat.PRIORITY_HIGH
+                else NotificationCompat.PRIORITY_DEFAULT
+            )
+            .setDefaults(
+                if (isExamFinished) NotificationCompat.DEFAULT_ALL
+                else 0
+            )
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setNumber(1)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
@@ -79,5 +107,10 @@ class ExamReminderWorker(
         const val KEY_SUBJECT_NAME = "subject_name"
         const val KEY_EXAM_TITLE = "exam_title"
         const val KEY_EXAM_ENDS_AT_MS = "exam_ends_at_ms"
+
+        const val KEY_REMINDER_TYPE = "reminder_type"
+        const val TYPE_ONE_DAY_BEFORE = "one_day_before"
+        const val TYPE_EXAM_FINISHED = "exam_finished"
+
     }
 }

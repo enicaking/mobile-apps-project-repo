@@ -31,7 +31,8 @@ object ExamReminderScheduler {
             ExamReminderWorker.KEY_EXAM_ID to examId,
             ExamReminderWorker.KEY_SUBJECT_NAME to subjectName,
             ExamReminderWorker.KEY_EXAM_TITLE to examTitle,
-            ExamReminderWorker.KEY_EXAM_ENDS_AT_MS to examEndsAtMs
+            ExamReminderWorker.KEY_EXAM_ENDS_AT_MS to examEndsAtMs,
+            ExamReminderWorker.KEY_REMINDER_TYPE to ExamReminderWorker.TYPE_ONE_DAY_BEFORE
         )
 
         val request = OneTimeWorkRequestBuilder<ExamReminderWorker>()
@@ -49,4 +50,36 @@ object ExamReminderScheduler {
     fun cancel(context: Context, examId: String) {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_PREFIX + examId)
     }
+
+    fun scheduleExamFinished(
+        context: Context,
+        examId: String,
+        subjectName: String,
+        examTitle: String,
+        examEndsAtMs: Long
+    ) {
+        val delayMs = examEndsAtMs - System.currentTimeMillis()
+
+        if (delayMs <= 0L) return
+
+        val data = workDataOf(
+            ExamReminderWorker.KEY_EXAM_ID to examId,
+            ExamReminderWorker.KEY_SUBJECT_NAME to subjectName,
+            ExamReminderWorker.KEY_EXAM_TITLE to examTitle,
+            ExamReminderWorker.KEY_EXAM_ENDS_AT_MS to examEndsAtMs,
+            ExamReminderWorker.KEY_REMINDER_TYPE to ExamReminderWorker.TYPE_EXAM_FINISHED
+        )
+
+        val request = OneTimeWorkRequestBuilder<ExamReminderWorker>()
+            .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
+            .setInputData(data)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "exam_finished_$examId",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
 }
