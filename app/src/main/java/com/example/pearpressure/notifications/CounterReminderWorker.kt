@@ -49,7 +49,7 @@ class CounterReminderWorker(
         )
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Water reminder")
-            .setContentText("You have not added water for 30 minutes in $subjectName • $examTitle")
+            .setContentText("You have not drunk water for 30 minutes. Remember, is vital to drink enough water!")
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

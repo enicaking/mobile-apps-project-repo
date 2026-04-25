@@ -52,7 +52,7 @@ object CounterNotificationHelper {
             context = context,
             notificationId = 3002,
             title = "Coffee warning",
-            body = "You have already added $coffeeTotal coffees."
+            body = "You have already had $coffeeTotal coffees today. You won't sleep tonight!"
         )
     }
 
@@ -61,7 +61,7 @@ object CounterNotificationHelper {
             context = context,
             notificationId = 3003,
             title = "Boost warning",
-            body = "You have already added $boostTotal energy drinks."
+            body = "You have already had $boostTotal energy drinks. Don't be a MONSTER HIGH!"
         )
     }
 
