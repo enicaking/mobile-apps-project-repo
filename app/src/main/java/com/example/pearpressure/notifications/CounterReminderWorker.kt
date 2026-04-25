@@ -45,13 +45,17 @@ class CounterReminderWorker(
 
         val notification = NotificationCompat.Builder(
             applicationContext,
-            NotificationUtils.COUNTER_CHANNEL_ID
+            NotificationUtils.HEADS_UP_CHANNEL_ID
         )
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Water reminder")
-            .setContentText("You have not added water for 30 minutes in $subjectName • $examTitle")
+            .setContentText("You have not drunk water for 30 minutes. Remember, is vital to drink enough water!")
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setNumber(1)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .build()
 
         NotificationManagerCompat.from(applicationContext)

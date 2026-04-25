@@ -52,7 +52,7 @@ object CounterNotificationHelper {
             context = context,
             notificationId = 3002,
             title = "Coffee warning",
-            body = "You have already added $coffeeTotal coffees."
+            body = "You have already had $coffeeTotal coffees today. You won't sleep tonight!"
         )
     }
 
@@ -61,7 +61,7 @@ object CounterNotificationHelper {
             context = context,
             notificationId = 3003,
             title = "Boost warning",
-            body = "You have already added $boostTotal energy drinks."
+            body = "You have already had $boostTotal energy drinks. Don't be a MONSTER HIGH!"
         )
     }
 
@@ -93,12 +93,16 @@ object CounterNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, NotificationUtils.COUNTER_CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, NotificationUtils.HEADS_UP_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
-            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setNumber(1)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .build()
 
         NotificationManagerCompat.from(context).notify(notificationId, notification)

@@ -53,13 +53,19 @@ class ExamReminderWorker(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(applicationContext, NotificationUtils.EXAM_CHANNEL_ID)
+        val notification = NotificationCompat.Builder(
+            applicationContext,
+            NotificationUtils.STANDARD_CHANNEL_ID
+        )
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Exam tomorrow: $examTitle")
             .setContentText("$subjectName • Ends at $endsAtText")
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setNumber(1)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .build()
 
         NotificationManagerCompat.from(applicationContext)
