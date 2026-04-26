@@ -107,7 +107,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
     private fun showForegroundNotification(
         title: String,
         body: String,
-        useHeadsUp: Boolean = false,
+        useHeadsUp: Boolean = true,
         badgeNumber: Int = 1
     ) {
         NotificationUtils.createChannels(applicationContext)
@@ -125,9 +125,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
+        val notificationId = System.currentTimeMillis().toInt()
+
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
-            0,
+            notificationId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -151,14 +153,13 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(priority)
-            .setDefaults(if (useHeadsUp) NotificationCompat.DEFAULT_ALL else 0)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setNumber(badgeNumber)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .build()
 
         NotificationManagerCompat.from(applicationContext)
-            .notify(System.currentTimeMillis().toInt(), notification)
+            .notify(notificationId, notification)
     }
 
     companion object {

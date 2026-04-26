@@ -36,9 +36,11 @@ class CounterReminderWorker(
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
+        val notificationId = System.currentTimeMillis().toInt()
+
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
-            2001,
+            notificationId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -59,7 +61,7 @@ class CounterReminderWorker(
             .build()
 
         NotificationManagerCompat.from(applicationContext)
-            .notify(WATER_REMINDER_NOTIFICATION_ID, notification)
+            .notify(notificationId, notification)
 
         return Result.success()
     }

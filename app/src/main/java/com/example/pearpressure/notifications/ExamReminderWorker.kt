@@ -67,17 +67,22 @@ class ExamReminderWorker(
             }
         }
 
+        val notificationId = System.currentTimeMillis().toInt()
+
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
-            examId.hashCode(),
+            notificationId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(
-            applicationContext,
-            NotificationUtils.EXAM_CHANNEL_ID
-        )
+        val channelId = if (isExamFinished) {
+            NotificationUtils.HEADS_UP_CHANNEL_ID
+        } else {
+            NotificationUtils.STANDARD_CHANNEL_ID
+        }
+
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
@@ -97,7 +102,7 @@ class ExamReminderWorker(
             .build()
 
         NotificationManagerCompat.from(applicationContext)
-            .notify(examId.hashCode(), notification)
+            .notify(notificationId, notification)
 
         return Result.success()
     }

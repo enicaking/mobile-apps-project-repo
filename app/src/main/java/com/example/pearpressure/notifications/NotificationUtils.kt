@@ -34,7 +34,6 @@ object NotificationUtils {
             ).apply {
                 description = HEADS_UP_CHANNEL_DESCRIPTION
                 setShowBadge(true)
-                enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             }
 

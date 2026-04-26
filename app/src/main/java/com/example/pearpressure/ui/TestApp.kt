@@ -73,6 +73,14 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 examTitle = exam.title,
                                 examEndsAtMs = exam.endsAtEpochMs
                             )
+
+                            ExamReminderScheduler.scheduleExamFinished(
+                                context = context.applicationContext,
+                                examId = exam.id,
+                                subjectName = subject.name,
+                                examTitle = exam.title,
+                                examEndsAtMs = exam.endsAtEpochMs
+                            )
                         }
                 }
             }
