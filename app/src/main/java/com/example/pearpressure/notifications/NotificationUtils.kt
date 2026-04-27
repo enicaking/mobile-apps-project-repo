@@ -11,7 +11,7 @@ object NotificationUtils {
     const val STANDARD_CHANNEL_NAME = "Standard notifications"
     const val STANDARD_CHANNEL_DESCRIPTION = "Standard app notifications"
 
-    const val HEADS_UP_CHANNEL_ID = "heads_up_notifications"
+    const val HEADS_UP_CHANNEL_ID = "heads_up_notifications_v2"
     const val HEADS_UP_CHANNEL_NAME = "Heads-up notifications"
     const val HEADS_UP_CHANNEL_DESCRIPTION = "Important notifications shown as pop-up"
 
@@ -34,6 +34,7 @@ object NotificationUtils {
             ).apply {
                 description = HEADS_UP_CHANNEL_DESCRIPTION
                 setShowBadge(true)
+                enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             }
 

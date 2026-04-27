@@ -67,7 +67,7 @@ class ExamReminderWorker(
             }
         }
 
-        val notificationId = System.currentTimeMillis().toInt()
+        val notificationId = NotificationIdFactory.nextId()
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
@@ -97,8 +97,8 @@ class ExamReminderWorker(
                 else 0
             )
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setNumber(1)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
+            .setOnlyAlertOnce(false)
             .build()
 
         NotificationManagerCompat.from(applicationContext)

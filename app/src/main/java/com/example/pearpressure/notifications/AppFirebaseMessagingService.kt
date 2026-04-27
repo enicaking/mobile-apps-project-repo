@@ -47,7 +47,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
         when (type) {
             "study_start" -> handleStudyStartNotification(message)
+
             "ranking_overtake" -> handleRankingOvertakeNotification(message)
+
+            "final_grade_added" -> handleFinalGradeAddedNotification(message)
+
             else -> {
                 val title = message.notification?.title
                     ?: message.data["title"]
@@ -66,6 +70,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
     }
+
 
     private fun handleStudyStartNotification(message: RemoteMessage) {
         val title = message.notification?.title
@@ -107,7 +112,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
     private fun showForegroundNotification(
         title: String,
         body: String,
-        useHeadsUp: Boolean = true,
+        useHeadsUp: Boolean = false,
         badgeNumber: Int = 1
     ) {
         NotificationUtils.createChannels(applicationContext)
@@ -125,7 +130,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
-        val notificationId = System.currentTimeMillis().toInt()
+        val notificationId = NotificationIdFactory.nextId()
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
@@ -156,10 +161,31 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setNumber(badgeNumber)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
+            .setOnlyAlertOnce(false)
             .build()
 
         NotificationManagerCompat.from(applicationContext)
             .notify(notificationId, notification)
+    }
+
+    private fun handleFinalGradeAddedNotification(message: RemoteMessage) {
+        val userName = message.data["userName"] ?: "Someone"
+        val subjectName = message.data["subjectName"] ?: "your subject"
+
+        val title = message.notification?.title
+            ?: message.data["title"]
+            ?: "Final grade added"
+
+        val body = message.notification?.body
+            ?: message.data["body"]
+            ?: "$userName has entered a final grade in $subjectName"
+
+        showForegroundNotification(
+            title = title,
+            body = body,
+            useHeadsUp = false,
+            badgeNumber = 1
+        )
     }
 
     companion object {

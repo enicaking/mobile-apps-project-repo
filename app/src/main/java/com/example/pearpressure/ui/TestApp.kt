@@ -27,7 +27,9 @@ private enum class AuthScreen { LOGIN, COMPLETE_PROFILE, APP }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TestApp(viewModel: MainViewModel = viewModel()) {
+fun TestApp(openPostExam: Boolean = false,
+            postExamId: String? = null,
+            viewModel: MainViewModel = viewModel()) {
     // Check if user is logged in
     var authScreen by remember {
         mutableStateOf(
@@ -59,7 +61,20 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
             val subjects by viewModel.subjects.collectAsState()
             val context = LocalContext.current
             val exams by viewModel.exams.collectAsState()
+            LaunchedEffect(openPostExam, postExamId, exams) {
+                if (openPostExam && !postExamId.isNullOrBlank()) {
+                    val exam = exams.firstOrNull { it.id == postExamId }
 
+                    if (exam != null) {
+                        navController.navigate(
+                            AppRoutes.Exams.createExamsRouteWithPostExam(
+                                subjectId = exam.subjectId,
+                                examId = exam.id
+                            )
+                        )
+                    }
+                }
+            }
             //Notification exam remainder
             LaunchedEffect(subjects, exams) {
                 subjects.forEach { subject ->
@@ -165,11 +180,19 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
 
                         composable(
                             route = AppRoutes.Exams.route,
-                            arguments = listOf(navArgument("subjectId") {
-                                type = NavType.StringType
-                            })
+                            arguments = listOf(
+                                navArgument("subjectId") {
+                                    type = NavType.StringType
+                                },
+                                navArgument("postExamId") {
+                                    type = NavType.StringType
+                                    nullable = true
+                                    defaultValue = null
+                                }
+                            )
                         ) { backStackEntry ->
                             val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
+                            val postExamId = backStackEntry.arguments?.getString("postExamId")
 
                             // Load data when entering
                             LaunchedEffect(subjectId) { viewModel.loadExams(subjectId) }
@@ -193,6 +216,7 @@ fun TestApp(viewModel: MainViewModel = viewModel()) {
                                 isOwner = isOwner,
                                 friends = friends,
                                 currentUserId = currentUserId,
+                                initialPostExamId = postExamId,
 
                                 onSearchFriends = { query -> viewModel.searchFriends(query) },
                                 onUserSelected = { user ->

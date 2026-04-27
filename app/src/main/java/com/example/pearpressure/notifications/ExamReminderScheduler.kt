@@ -9,8 +9,11 @@ import java.util.concurrent.TimeUnit
 
 object ExamReminderScheduler {
     private const val WORK_PREFIX = "exam_reminder_"
-    //private const val ONE_DAY_MS = 24L * 60 * 60 * 1000
-    private const val ONE_DAY_MS = 60_000L //test only, use below
+    private const val EXAM_FINISHED_WORK_PREFIX = "exam_finished_"
+
+    // TEST ONLY: 1 minute before exam.
+    // For final version, use: 24L * 60 * 60 * 1000
+    private const val ONE_DAY_MS = 60_000L
 
     fun scheduleOneDayBefore(
         context: Context,
@@ -22,10 +25,7 @@ object ExamReminderScheduler {
         val triggerAtMs = examEndsAtMs - ONE_DAY_MS
         val delayMs = triggerAtMs - System.currentTimeMillis()
 
-        if (delayMs <= 0L) {
-            // Too late to schedule (exam is < 24h away or already passed)
-            return
-        }
+        if (delayMs <= 0L) return
 
         val data = workDataOf(
             ExamReminderWorker.KEY_EXAM_ID to examId,
@@ -45,10 +45,6 @@ object ExamReminderScheduler {
             ExistingWorkPolicy.REPLACE,
             request
         )
-    }
-
-    fun cancel(context: Context, examId: String) {
-        WorkManager.getInstance(context).cancelUniqueWork(WORK_PREFIX + examId)
     }
 
     fun scheduleExamFinished(
@@ -76,10 +72,14 @@ object ExamReminderScheduler {
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
-            "exam_finished_$examId",
+            EXAM_FINISHED_WORK_PREFIX + examId,
             ExistingWorkPolicy.REPLACE,
             request
         )
     }
 
+    fun cancel(context: Context, examId: String) {
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_PREFIX + examId)
+        WorkManager.getInstance(context).cancelUniqueWork(EXAM_FINISHED_WORK_PREFIX + examId)
+    }
 }

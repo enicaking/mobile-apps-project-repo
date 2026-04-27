@@ -18,7 +18,9 @@ import java.util.concurrent.TimeUnit
 
 object CounterNotificationHelper {
     private const val WATER_REMINDER_WORK = "water_reminder_work"
-    //private const val WATER_REMINDER_MINUTES = 30L
+
+    // TEST ONLY: 1 minute.
+    // For final version, use 30L.
     private const val WATER_REMINDER_MINUTES = 1L
 
     fun scheduleWaterReminder(
@@ -50,7 +52,6 @@ object CounterNotificationHelper {
     fun showCoffeeWarning(context: Context, coffeeTotal: Int) {
         showImmediateCounterNotification(
             context = context,
-            notificationId = 3002,
             title = "Coffee warning",
             body = "You have already had $coffeeTotal coffees today. You won't sleep tonight!"
         )
@@ -59,7 +60,6 @@ object CounterNotificationHelper {
     fun showBoostWarning(context: Context, boostTotal: Int) {
         showImmediateCounterNotification(
             context = context,
-            notificationId = 3003,
             title = "Boost warning",
             body = "You have already had $boostTotal energy drinks. Don't be a MONSTER HIGH!"
         )
@@ -67,7 +67,6 @@ object CounterNotificationHelper {
 
     private fun showImmediateCounterNotification(
         context: Context,
-        notificationId: Int,
         title: String,
         body: String
     ) {
@@ -86,7 +85,7 @@ object CounterNotificationHelper {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
-        val notificationId = System.currentTimeMillis().toInt()
+        val notificationId = NotificationIdFactory.nextId()
 
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -102,11 +101,13 @@ object CounterNotificationHelper {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setNumber(1)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
+            .setOnlyAlertOnce(false)
             .build()
 
-        NotificationManagerCompat.from(context).notify(notificationId, notification)
+        NotificationManagerCompat.from(context)
+            .notify(notificationId, notification)
     }
 }

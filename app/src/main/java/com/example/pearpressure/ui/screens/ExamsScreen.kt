@@ -46,6 +46,7 @@ fun ExamsScreen(
     onOpenInProgressExam: (Exam) -> Unit,
     onDeleteExam: (String) -> Unit,
     onBack: () -> Unit,
+    initialPostExamId: String? = null,
     onSaveResults: (examId: String, expected: Double?, sleep: Double?, actual: Double?) -> Unit = { _, _, _, _ -> }
 ) {
     val context = LocalContext.current
@@ -70,6 +71,11 @@ fun ExamsScreen(
     var examToEdit by remember { mutableStateOf<Exam?>(null) }
 
     var examForResults by remember { mutableStateOf<Exam?>(null) }
+    LaunchedEffect(initialPostExamId, exams) {
+        if (!initialPostExamId.isNullOrBlank()) {
+            examForResults = exams.firstOrNull { it.id == initialPostExamId }
+        }
+    }
     var expectedInput by remember { mutableStateOf("") }
     var sleepInput by remember { mutableStateOf("") }
     var actualInput by remember { mutableStateOf("") }

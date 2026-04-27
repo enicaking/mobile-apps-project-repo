@@ -36,7 +36,7 @@ class CounterReminderWorker(
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
-        val notificationId = System.currentTimeMillis().toInt()
+        val notificationId = NotificationIdFactory.nextId()
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
@@ -51,13 +51,12 @@ class CounterReminderWorker(
         )
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Water reminder")
-            .setContentText("You have not drunk water for 30 minutes. Remember, is vital to drink enough water!")
-            .setAutoCancel(true)
+            .setContentText("You have not drunk water recently. Remember, it is vital to drink enough water!")            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setNumber(1)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
+            .setOnlyAlertOnce(false)
             .build()
 
         NotificationManagerCompat.from(applicationContext)

@@ -10,9 +10,13 @@ sealed class AppRoutes(val route: String) {
 
     // Screens with arguments
     // Dynamic path for exam
-    object Exams : AppRoutes("exams/{subjectId}") {
+    object Exams : AppRoutes("exams/{subjectId}?postExamId={postExamId}") {
         fun createExamsRoute(subjectId: String): String {
             return "exams/$subjectId"
+        }
+
+        fun createExamsRouteWithPostExam(subjectId: String, examId: String): String {
+            return "exams/$subjectId?postExamId=$examId"
         }
     }
 
