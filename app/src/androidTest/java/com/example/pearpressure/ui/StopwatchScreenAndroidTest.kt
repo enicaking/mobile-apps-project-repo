@@ -3,11 +3,13 @@ package com.example.pearpressure.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.example.pearpressure.MainViewModel
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -18,10 +20,12 @@ class StopwatchScreenAndroidTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var viewModel: MainViewModel
+    private var studyStartedCounter = 0
 
     @Before
     fun setUp() {
         viewModel = MainViewModel()
+        studyStartedCounter = 0
 
         composeRule.setContent {
             MaterialTheme {
@@ -31,7 +35,9 @@ class StopwatchScreenAndroidTest {
                     showTitle = true,
                     bottomInfoText = "2 days until the exam.",
                     onBack = {},
-                    onStudyStarted = {}
+                    onStudyStarted = {
+                        studyStartedCounter++
+                    }
                 )
             }
         }
@@ -48,9 +54,20 @@ class StopwatchScreenAndroidTest {
         composeRule.onNodeWithText("Poop").assertIsDisplayed()
         composeRule.onNodeWithText("Water").assertIsDisplayed()
 
-        composeRule.onNodeWithText("Participants")
+        composeRule
+            .onNodeWithText("Participants")
             .performScrollTo()
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun clickingStart_callsOnStudyStartedOnce() {
+        composeRule.onNodeWithText("Start").performClick()
+
+        composeRule.waitForIdle()
+
+        assertEquals(1, studyStartedCounter)
+        composeRule.onNodeWithText("Pause").assertIsDisplayed()
     }
 
     @Test
@@ -71,5 +88,32 @@ class StopwatchScreenAndroidTest {
 
         composeRule.onNodeWithText("Add water (liters)").assertIsDisplayed()
         composeRule.onNodeWithText("Liters (e.g. 0.5)").assertIsDisplayed()
+    }
+
+    @Test
+    fun clickingCoffee_opensCoffeeTypeDialog() {
+        composeRule.onNodeWithText("Coffee").performClick()
+
+        composeRule.onNodeWithText("Coffee type").assertIsDisplayed()
+        composeRule.onNodeWithText("Decaf").assertIsDisplayed()
+        composeRule.onNodeWithText("Latte").assertIsDisplayed()
+        composeRule.onNodeWithText("Cappuccino").assertIsDisplayed()
+        composeRule.onNodeWithText("Macchiato").assertIsDisplayed()
+        composeRule.onNodeWithText("Espresso").assertIsDisplayed()
+    }
+
+    @Test
+    fun clickingBoost_opensBoostDrinkDialog() {
+        composeRule.onNodeWithText("Boost").performClick()
+
+        composeRule.onNodeWithText("Boost drink").assertIsDisplayed()
+        composeRule.onNodeWithText("Red Bull").assertIsDisplayed()
+        composeRule.onNodeWithText("Monster").assertIsDisplayed()
+        composeRule.onNodeWithText("Energeti").assertIsDisplayed()
+    }
+
+    @Test
+    fun finishButton_isDisabledBeforeStarting() {
+        composeRule.onNodeWithText("Finish").assertIsNotEnabled()
     }
 }
