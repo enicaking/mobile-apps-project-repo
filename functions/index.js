@@ -40,6 +40,8 @@ exports.sendStudyStartedNotification = onDocumentCreated(
 
       memberIds = memberIds.filter((uid) => uid !== fromUserId);
 
+      logger.log("Subject data:", subject);
+      logger.log("Subject members:", subject.members);
       logger.info(`Subject ${subjectId} has ${memberIds.length} recipients`);
 
       if (memberIds.length === 0) {
@@ -212,6 +214,9 @@ exports.sendFinalGradeAddedNotification = onDocumentUpdated(
           userId: String(addedUserId),
           userName: String(userName),
         },
+           android: {
+             priority: "high",
+           },
       };
 
       logger.log("=== FINAL_GRADE DEBUG ===");
