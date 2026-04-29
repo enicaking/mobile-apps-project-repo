@@ -393,9 +393,6 @@ class FirestoreRepository {
         updates["sleepHours.$userId"] = sleep ?: com.google.firebase.firestore.FieldValue.delete()
         updates["actualGrades.$userId"] = actual ?: com.google.firebase.firestore.FieldValue.delete()
 
-        println("DEBUG updateExamStats examId=$examId userId=$userId expected=$expected sleep=$sleep actual=$actual")
-        println("DEBUG updates=$updates")
-
         docRef.update(updates).await()
     }
 
