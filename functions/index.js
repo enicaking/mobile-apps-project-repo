@@ -9,6 +9,8 @@ const db = admin.firestore();
 exports.sendStudyStartedNotification = onDocumentCreated(
   "study_events/{eventId}",
   async (event) => {
+    logger.log("sendStudyStartedNotification triggered");
+    logger.log("Study event data:", event.data.data());
     try {
       const snapshot = event.data;
       if (!snapshot) {
@@ -40,8 +42,8 @@ exports.sendStudyStartedNotification = onDocumentCreated(
 
       memberIds = memberIds.filter((uid) => uid !== fromUserId);
 
-      logger.log("Subject data:", subject);
-      logger.log("Subject members:", subject.members);
+      logger.log("Subject data:", subjectData);
+      logger.log("Subject members:", subjectData.members);
       logger.info(`Subject ${subjectId} has ${memberIds.length} recipients`);
 
       if (memberIds.length === 0) {
