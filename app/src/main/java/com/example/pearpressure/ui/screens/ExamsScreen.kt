@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -488,11 +489,47 @@ private fun ExamCard(
 
 @Composable
 private fun StatusPill(text: String, isPositive: Boolean) {
-    val bg = if (isPositive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-    val fg = if (isPositive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+    val bg: Color
+    val fg: Color
 
-    Surface(color = bg, contentColor = fg, shape = MaterialTheme.shapes.medium) {
-        Text(text = text, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+    when (text) {
+        "In Progress" -> {
+            bg = Color(0xFFE3F2FD) // Light blue
+            fg = Color(0xFF1565C0) // Dark blue
+        }
+
+        "Waiting for Expected" -> {
+            bg = Color(0xFFFFF3E0) // Light orange
+            fg = Color(0xFFEF6C00) // Dark orange
+        }
+
+        "Waiting for Final" -> {
+            bg = Color(0xFFF3E5F5) // Light purple
+            fg = Color(0xFF7B1FA2) // Dark purple
+        }
+
+        "Finished" -> {
+            bg = Color(0xFFE8F5E9) // Light green
+            fg = Color(0xFF2E7D32) // Dark green
+        }
+
+        else -> {
+            bg = MaterialTheme.colorScheme.surfaceVariant
+            fg = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    }
+
+    Surface(
+        color = bg,
+        contentColor = fg,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
