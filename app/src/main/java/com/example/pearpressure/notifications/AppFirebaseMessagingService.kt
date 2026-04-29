@@ -147,6 +147,16 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun handleFinalGradeAddedNotification(message: RemoteMessage) {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+
+        val senderUid = message.data["fromUserId"]
+            ?: message.data["userId"]
+            ?: message.data["uid"]
+
+        if (!senderUid.isNullOrBlank() && senderUid == currentUid) {
+            Log.d(TAG, "Ignoring own final grade notification")
+            return
+        }
         val userName = message.data["userName"] ?: "Someone"
         val subjectName = message.data["subjectName"] ?: "your subject"
 

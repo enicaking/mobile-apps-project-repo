@@ -328,8 +328,8 @@ fun ExamsScreen(
 
                         // PHASE 2: Just Real Grade
                         !hasReal -> {
-                            Text("Stats saved! Now, enter your real grade:", style = MaterialTheme.typography.bodySmall)
-                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Real Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            Text("Stats saved! Now, enter your Final grade:", style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Final Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                         }
 
                         // PHASE 3: View Mode (Finished) - Visual summary
@@ -370,7 +370,7 @@ fun ExamsScreen(
                         else -> {
                             OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                             OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Real Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Final Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }

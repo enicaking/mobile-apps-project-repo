@@ -630,18 +630,26 @@ class MainViewModel : ViewModel() {
                     val bathroom = userSessions.sumOf { it.bathroomBreaks }
 
                     val relevantExams = if (examId != null) exams.filter { it.id == examId } else exams
-                    val completedExams = relevantExams.filter { it.actualGrades.containsKey(userId) }
+
+                    val examsWithActual = relevantExams.filter { it.actualGrades.containsKey(userId) }
+                    val examsWithExpected = relevantExams.filter { it.expectedGrades.containsKey(userId) }
+                    val examsWithSleep = relevantExams.filter { it.sleepHours.containsKey(userId) }
 
                     fun normalize(value: Double?, max: Double): Double {
                         val actualMax = if (max <= 0.0) 10.0 else max
                         return ((value ?: 0.0) / actualMax) * 10.0
                     }
 
-                    val sumActualNormalized = completedExams.sumOf { normalize(it.actualGrades[userId], it.maxGrade) }
-                    val sumExpectedNormalized = completedExams.sumOf { normalize(it.expectedGrades[userId], it.maxGrade) }
+                    val sumActualNormalized = examsWithActual.sumOf {
+                        normalize(it.actualGrades[userId], it.maxGrade)
+                    }
 
-                    val avgSleep = if (completedExams.isNotEmpty()) {
-                        completedExams.map { it.sleepHours[userId] ?: 0.0 }.average()
+                    val sumExpectedNormalized = examsWithExpected.sumOf {
+                        normalize(it.expectedGrades[userId], it.maxGrade)
+                    }
+
+                    val avgSleep = if (examsWithSleep.isNotEmpty()) {
+                        examsWithSleep.map { it.sleepHours[userId] ?: 0.0 }.average()
                     } else {
                         0.0
                     }

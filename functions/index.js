@@ -100,7 +100,6 @@ exports.sendStudyStartedNotification = onDocumentCreated(
 
 exports.sendFinalGradeAddedNotification = onDocumentUpdated(
   "exams/{examId}",
-
   async (event) => {
     logger.log("sendFinalGradeAddedNotification triggered");
 
@@ -109,9 +108,6 @@ exports.sendFinalGradeAddedNotification = onDocumentUpdated(
 
     const beforeActualGrades = before.actualGrades || {};
     const afterActualGrades = after.actualGrades || {};
-
-    logger.log("Before actualGrades:", beforeActualGrades);
-    logger.log("After actualGrades:", afterActualGrades);
 
     const addedUserIds = Object.keys(afterActualGrades).filter((uid) => {
       const oldValue = beforeActualGrades[uid];
@@ -151,9 +147,15 @@ exports.sendFinalGradeAddedNotification = onDocumentUpdated(
 
     const subject = subjectSnap.data() || {};
     const subjectName = subject.name || "your subject";
-    const memberIds = subject.members || [];
 
-    logger.log(`Subject ${subjectId} has ${memberIds.length} members`);
+    const allParticipantIds = Array.from(
+      new Set([
+        subject.ownerId,
+        ...(Array.isArray(subject.members) ? subject.members : []),
+      ].filter(Boolean))
+    );
+
+    logger.log(`Subject ${subjectId} has ${allParticipantIds.length} participants`);
 
     for (const addedUserId of addedUserIds) {
       let userName = "Someone";
@@ -173,27 +175,32 @@ exports.sendFinalGradeAddedNotification = onDocumentUpdated(
           "Someone";
       }
 
-      const tokens = [];
+      // IMPORTANT: send to everyone except the user who added the final grade
+      const recipientIds = allParticipantIds.filter((uid) => uid !== addedUserId);
 
-      for (const memberId of memberIds) {
-        const userDoc = await admin.firestore()
-          .collection("users")
-          .doc(memberId)
-          .get();
+      logger.log("Final grade notification recipients:", recipientIds);
 
-        if (userDoc.exists) {
-          const userData = userDoc.data() || {};
-          if (userData.fcmToken) {
-            tokens.push(userData.fcmToken);
-          }
-        }
+      if (recipientIds.length === 0) {
+        logger.log("No recipients after excluding sender.");
+        continue;
       }
+
+      const userDocs = await Promise.all(
+        recipientIds.map((uid) =>
+          admin.firestore().collection("users").doc(uid).get()
+        )
+      );
+
+      const tokens = userDocs
+        .filter((doc) => doc.exists)
+        .map((doc) => doc.data()?.fcmToken)
+        .filter((token) => typeof token === "string" && token.length > 0);
 
       logger.log("Valid tokens found:", tokens.length);
 
       if (tokens.length === 0) {
         logger.log("No tokens to send.");
-        return;
+        continue;
       }
 
       const title = "Final grade added";
@@ -213,18 +220,17 @@ exports.sendFinalGradeAddedNotification = onDocumentUpdated(
           examTitle: String(examTitle),
           subjectId: String(subjectId),
           subjectName: String(subjectName),
+
+          // Keep both names for Android compatibility
           userId: String(addedUserId),
+          fromUserId: String(addedUserId),
+
           userName: String(userName),
         },
-           android: {
-             priority: "high",
-           },
+        android: {
+          priority: "high",
+        },
       };
-
-      logger.log("=== FINAL_GRADE DEBUG ===");
-      logger.log("Title:", title);
-      logger.log("Body:", body);
-      logger.log("Data:", message.data);
 
       const response = await admin.messaging().sendEachForMulticast(message);
 

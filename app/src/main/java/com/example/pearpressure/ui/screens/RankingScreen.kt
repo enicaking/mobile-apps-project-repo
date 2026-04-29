@@ -29,7 +29,7 @@ enum class RankingCategory(val label: String, val unit: String) {
     HABIT_BATHROOM("Bathroom Breaks", "breaks"),
 
     // FIXED: Removed the hardcoded "/10" so it doesn't conflict with your new maxGrade system
-    GRADE_ACTUAL("Actual Grade", ""),
+    GRADE_ACTUAL("Final Grade", ""),
     GRADE_EXPECTED("Expected Grade", ""),
     SLEEP("Sleep", "hrs")
 }
@@ -78,6 +78,44 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
 
     // Find selected exam to know the max scale for display
     val currentSelectedExam = exams.find { it.id == selectedExamId }
+
+    val hasMyExpectedGrade = currentSelectedExam?.expectedGrades?.containsKey(currentUserId) == true
+    val hasMyFinalGrade = currentSelectedExam?.actualGrades?.containsKey(currentUserId) == true
+    val hasMySleepHours = currentSelectedExam?.sleepHours?.containsKey(currentUserId) == true
+
+    val availableCategories = RankingCategory.entries.filter { category ->
+        when (category) {
+            RankingCategory.HARD_WORK -> true
+            RankingCategory.STUDY_EFFICIENCY -> true
+            RankingCategory.HABIT_WATER -> true
+            RankingCategory.HABIT_COFFEE -> true
+            RankingCategory.HABIT_ENERGY -> true
+            RankingCategory.HABIT_BATHROOM -> true
+
+            RankingCategory.REALITY_GAP ->
+                selectedExamId != null && hasMyExpectedGrade && hasMyFinalGrade
+
+            RankingCategory.GRADE_EXPECTED ->
+                selectedExamId != null && hasMyExpectedGrade
+
+            RankingCategory.GRADE_ACTUAL ->
+                selectedExamId != null && hasMyFinalGrade
+
+            RankingCategory.SLEEP ->
+                selectedExamId != null && hasMySleepHours
+        }
+    }
+
+    LaunchedEffect(
+        selectedExamId,
+        hasMyExpectedGrade,
+        hasMyFinalGrade,
+        hasMySleepHours
+    ) {
+        if (selectedCategory !in availableCategories) {
+            selectedCategory = RankingCategory.HARD_WORK
+        }
+    }
 
     Scaffold { padding ->
         Column(
@@ -146,7 +184,11 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     ) {
                         DropdownMenuItem(
                             text = { Text("All Exams (Total)") },
-                            onClick = { selectedExamId = null; examExpanded = false }
+                            onClick = {
+                                selectedExamId = null
+                                selectedCategory = RankingCategory.HARD_WORK
+                                examExpanded = false
+                            }
                         )
                         exams.forEach { exam ->
                             DropdownMenuItem(
@@ -175,10 +217,13 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                         expanded = categoryExpanded,
                         onDismissRequest = { categoryExpanded = false }
                     ) {
-                        RankingCategory.entries.forEach { cat ->
+                        availableCategories.forEach { cat ->
                             DropdownMenuItem(
                                 text = { Text(cat.label) },
-                                onClick = { selectedCategory = cat; categoryExpanded = false }
+                                onClick = {
+                                    selectedCategory = cat
+                                    categoryExpanded = false
+                                }
                             )
                         }
                     }
@@ -263,8 +308,9 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     subjects.forEach { s ->
                         OutlinedButton(
                             onClick = {
+                                selectedExamId = null
+                                selectedCategory = RankingCategory.HARD_WORK
                                 viewModel.selectRankingSubject(s.id)
-                                //viewModel.loadExams(s.id)
                                 subjectPickerExpanded = false
                             },
                             modifier = Modifier.fillMaxWidth()
