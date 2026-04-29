@@ -48,8 +48,6 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         when (type) {
             "study_start" -> handleStudyStartNotification(message)
 
-            "ranking_overtake" -> handleRankingOvertakeNotification(message)
-
             "final_grade_added" -> handleFinalGradeAddedNotification(message)
 
             else -> {
@@ -85,26 +83,6 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             title = title,
             body = body,
             useHeadsUp = false,
-            badgeNumber = 1
-        )
-    }
-
-    private fun handleRankingOvertakeNotification(message: RemoteMessage) {
-        val overtakerName = message.data["overtakerName"] ?: "Someone"
-        val subjectName = message.data["subjectName"] ?: "your subject"
-
-        val title = message.notification?.title
-            ?: message.data["title"]
-            ?: "Ranking update"
-
-        val body = message.notification?.body
-            ?: message.data["body"]
-            ?: "$overtakerName has overtaken you in $subjectName"
-
-        showForegroundNotification(
-            title = title,
-            body = body,
-            useHeadsUp = true,
             badgeNumber = 1
         )
     }
