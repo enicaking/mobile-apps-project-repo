@@ -38,15 +38,10 @@ class MainActivity : ComponentActivity() {
             viewModel.saveFcmToken(token)
         }
 
-        val openPostExam = intent.getBooleanExtra("open_post_exam", false)
-        val postExamId = intent.getStringExtra("exam_id")
 
         setContent {
             SofiaTestTheme() {
-                TestApp(
-                    openPostExam = openPostExam,
-                    postExamId = postExamId
-                )
+                TestApp( )
             }
         }
     }

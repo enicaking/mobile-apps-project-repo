@@ -15,9 +15,6 @@ sealed class AppRoutes(val route: String) {
             return "exams/$subjectId"
         }
 
-        fun createExamsRouteWithPostExam(subjectId: String, examId: String): String {
-            return "exams/$subjectId?postExamId=$examId"
-        }
     }
 
     // Dynamic path for stopwatch

@@ -61,10 +61,6 @@ class ExamReminderWorker(
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-            if (isExamFinished) {
-                putExtra("open_post_exam", true)
-                putExtra("exam_id", examId)
-            }
         }
 
         val notificationId = NotificationIdFactory.nextId()
