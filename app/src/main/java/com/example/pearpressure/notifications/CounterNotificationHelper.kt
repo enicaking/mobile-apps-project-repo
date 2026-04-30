@@ -60,7 +60,7 @@ object CounterNotificationHelper {
     fun showBoostWarning(context: Context, boostTotal: Int) {
         showImmediateCounterNotification(
             context = context,
-            title = "Boost warning",
+            title = "Monster High warning",
             body = "You have already had $boostTotal energy drinks. Don't be a MONSTER HIGH!"
         )
     }
