@@ -83,26 +83,31 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     val hasMyFinalGrade = currentSelectedExam?.actualGrades?.containsKey(currentUserId) == true
     val hasMySleepHours = currentSelectedExam?.sleepHours?.containsKey(currentUserId) == true
 
+    // FILTRO DE CATEGORÍAS (Respetando la lógica de "no mostrar si no hay datos propios")
     val availableCategories = RankingCategory.entries.filter { category ->
         when (category) {
-            RankingCategory.HARD_WORK -> true
-            RankingCategory.STUDY_EFFICIENCY -> true
-            RankingCategory.HABIT_WATER -> true
-            RankingCategory.HABIT_COFFEE -> true
-            RankingCategory.HABIT_ENERGY -> true
+            RankingCategory.HARD_WORK,
+            RankingCategory.STUDY_EFFICIENCY,
+            RankingCategory.HABIT_WATER,
+            RankingCategory.HABIT_COFFEE,
+            RankingCategory.HABIT_ENERGY,
             RankingCategory.HABIT_BATHROOM -> true
 
             RankingCategory.REALITY_GAP ->
-                selectedExamId != null && hasMyExpectedGrade && hasMyFinalGrade
+                if (selectedExamId != null) hasMyExpectedGrade && hasMyFinalGrade
+                else entries.any { it.uid == currentUserId && it.avgAccuracy != 0.0 }
 
             RankingCategory.GRADE_EXPECTED ->
-                selectedExamId != null && hasMyExpectedGrade
+                if (selectedExamId != null) hasMyExpectedGrade
+                else entries.any { it.uid == currentUserId && it.avgExpectedGrade > 0 }
 
             RankingCategory.GRADE_ACTUAL ->
-                selectedExamId != null && hasMyFinalGrade
+                if (selectedExamId != null) hasMyFinalGrade
+                else entries.any { it.uid == currentUserId && it.avgActualGrade > 0 }
 
             RankingCategory.SLEEP ->
-                selectedExamId != null && hasMySleepHours
+                if (selectedExamId != null) hasMySleepHours
+                else entries.any { it.uid == currentUserId && it.avgSleep > 0 }
         }
     }
 
@@ -110,7 +115,8 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         selectedExamId,
         hasMyExpectedGrade,
         hasMyFinalGrade,
-        hasMySleepHours
+        hasMySleepHours,
+        entries // Añadimos entries para que revalúe si aparecen datos promediados
     ) {
         if (selectedCategory !in availableCategories) {
             selectedCategory = RankingCategory.HARD_WORK
@@ -186,7 +192,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                             text = { Text("All Exams (Total)") },
                             onClick = {
                                 selectedExamId = null
-                                selectedCategory = RankingCategory.HARD_WORK
                                 examExpanded = false
                             }
                         )
@@ -233,11 +238,10 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // 4. Ranking List
-            // We sort by the selected category here to ensure the order is correct
             val sortedEntries = remember(entries, selectedCategory) {
                 when (selectedCategory) {
                     RankingCategory.HARD_WORK -> entries.sortedByDescending { it.totalStudyTimeMs }
-                    RankingCategory.REALITY_GAP -> entries.sortedByDescending { it.avgActualGrade - it.avgExpectedGrade }
+                    RankingCategory.REALITY_GAP -> entries.sortedByDescending { it.avgAccuracy }
                     RankingCategory.STUDY_EFFICIENCY -> entries.sortedByDescending { it.efficiencyScore }
                     RankingCategory.HABIT_WATER -> entries.sortedByDescending { it.totalWater }
                     RankingCategory.HABIT_COFFEE -> entries.sortedByDescending { it.totalCoffee }
@@ -259,7 +263,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     modifier = Modifier.weight(1f)
                 ) {
                     itemsIndexed(sortedEntries) { index, entry ->
-                        // NEW: Check friendship and request status
                         val isFriend = friends.any { it.uid == entry.uid }
                         val requestSent = outgoingRequests.any { it.to.uid == entry.uid }
 
@@ -272,7 +275,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                             isCurrentUser = entry.uid == currentUserId,
                             isAlreadyFriend = isFriend,
                             isRequestPending = requestSent,
-                            onAddFriend = { userToConfirm = entry } // Open confirmation dialog
+                            onAddFriend = { userToConfirm = entry }
                         )
                     }
                 }
@@ -335,11 +338,10 @@ private fun RankingRow(
     isRequestPending: Boolean,
     onAddFriend: () -> Unit
 ) {
-    // Determine Podium Colors
     val rowColor = when (rank) {
-        1 -> Color(0xFFFFD700).copy(alpha = 0.15f) // Gold
-        2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f) // Silver
-        3 -> Color(0xFFCD7F32).copy(alpha = 0.15f) // Bronze
+        1 -> Color(0xFFFFD700).copy(alpha = 0.15f)
+        2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f)
+        3 -> Color(0xFFCD7F32).copy(alpha = 0.15f)
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
@@ -368,13 +370,9 @@ private fun RankingRow(
             )
 
             Column(modifier = Modifier.weight(1f)) {
-                // INSERTED STREAK NEXT TO USERNAME (ALWAYS VISIBLE)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-
                     Spacer(modifier = Modifier.width(6.dp))
-
-                    // Logic: Orange if streak > 0, LightGray if 0
                     val streakColor = if (entry.currentStreak > 0) Color(0xFFFF9800) else Color.LightGray
                     Text(
                         text = "🔥${entry.currentStreak}",
@@ -386,63 +384,36 @@ private fun RankingRow(
                 Text(category.label, style = MaterialTheme.typography.bodySmall)
             }
 
-            // --- ADD FRIEND BUTTON ---
             if (!isCurrentUser) {
-                if (isAlreadyFriend) {
-                    // Friend already
+                if (!isAlreadyFriend && !isRequestPending) {
+                    IconButton(onClick = onAddFriend) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
                 } else if (isRequestPending) {
                     IconButton(onClick = {}, enabled = false) {
-                        Icon(
-                            imageVector = Icons.Default.HourglassEmpty,
-                            contentDescription = "Pending",
-                            tint = Color.Gray
-                        )
-                    }
-                } else {
-                    IconButton(onClick = onAddFriend) {
-                        Icon(
-                            imageVector = Icons.Default.PersonAdd,
-                            contentDescription = "Add Friend",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = Color.Gray)
                     }
                 }
             }
 
-            // --- DATA DISPLAY ---
-            val realityGapValue = entry.avgActualGrade - entry.avgExpectedGrade
-
+            val realityGapValue = entry.avgAccuracy
             val displayValue = when (category) {
                 RankingCategory.HARD_WORK -> formatMsWithSeconds(entry.totalStudyTimeMs)
-
                 RankingCategory.REALITY_GAP -> {
                     val sign = if (realityGapValue > 0) "+" else ""
                     val displayGap = if (isAllExams) realityGapValue else realityGapValue * (maxGrade / 10.0)
                     "$sign${"%.1f".format(displayGap)} ${category.unit}"
                 }
-
-                RankingCategory.STUDY_EFFICIENCY -> {
-                    "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
-                }
-
+                RankingCategory.STUDY_EFFICIENCY -> "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
                 RankingCategory.GRADE_ACTUAL -> {
-                    if (isAllExams) {
-                        "${"%.1f".format(entry.avgActualGrade)} pts"
-                    } else {
-                        "${"%.1f".format(entry.avgActualGrade * (maxGrade / 10.0))}/$maxGrade"
-                    }
+                    if (isAllExams) "${"%.1f".format(entry.avgActualGrade)} pts"
+                    else "${"%.1f".format(entry.avgActualGrade * (maxGrade / 10.0))}/$maxGrade"
                 }
-
                 RankingCategory.GRADE_EXPECTED -> {
-                    if (isAllExams) {
-                        "${"%.1f".format(entry.avgExpectedGrade)} pts"
-                    } else {
-                        "${"%.1f".format(entry.avgExpectedGrade * (maxGrade / 10.0))}/$maxGrade"
-                    }
+                    if (isAllExams) "${"%.1f".format(entry.avgExpectedGrade)} pts"
+                    else "${"%.1f".format(entry.avgExpectedGrade * (maxGrade / 10.0))}/$maxGrade"
                 }
-
                 RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
-
                 else -> {
                     val count = when(category) {
                         RankingCategory.HABIT_WATER -> entry.totalWater
@@ -470,14 +441,10 @@ private fun RankingRow(
     }
 }
 
-// FORMATTER: Now shows Hours, Minutes, and Seconds (Removed leading zeros for a cleaner look)
 private fun formatMsWithSeconds(ms: Long): String {
     val hours = ms / 3_600_000
     val minutes = (ms % 3_600_000) / 60_000
     val seconds = (ms % 60_000) / 1000
-    return if (hours > 0) {
-        "${hours}h ${minutes}m ${seconds}s"
-    } else {
-        "${minutes}m ${seconds}s"
-    }
+    return if (hours > 0) "${hours}h ${minutes}m ${seconds}s"
+    else "${minutes}m ${seconds}s"
 }
