@@ -55,10 +55,10 @@ fun ProfileScreen(
     // LOGICA PARA EL BADGE (Nivel según horas)
     val totalHours = totalStudyTime / 3600000.0
     val (levelBadge, badgeColor) = when {
-        totalHours < 1 -> "Rookie 🍐" to Color(0xFF8BC34A)
-        totalHours < 10 -> "Steady Student 🔥" to Color(0xFFFF9800)
-        totalHours < 50 -> "Focus Master 🧠" to Color(0xFF2196F3)
-        else -> "Academic Legend 👑" to Color(0xFF9C27B0)
+        totalHours < 1 -> "Mini Pear 🍐" to Color(0xFFF44336)
+        totalHours < 10 -> "Focus Pear 🍐" to Color(0xFFFF9800)
+        totalHours < 50 -> "Master Pear 🍐" to Color(0xFF8BC34A)
+        else -> "Gold Pear 🍐" to Color(0xFFDAA520)
     }
 
     Column(
