@@ -698,7 +698,7 @@ class MainViewModel : ViewModel() {
                         return ((value ?: 0.0) / actualMax) * 10.0
                     }
 
-                    // --- ESTO ES LO QUE BUSCAS: SUMA DE DIFERENCIAS ---
+                    // SUMA DE DIFERENCIAS de notas
                     var totalGap = 0.0
                     relevantExams.forEach { exam ->
                         val actual = exam.actualGrades[userId]
@@ -722,6 +722,12 @@ class MainViewModel : ViewModel() {
                         examsWithExpected.map { normalize(it.expectedGrades[userId], it.maxGrade) }.average()
                     } else 0.0
 
+                    // LOGIC FOR SLEEP
+                    val examsWithSleep = relevantExams.filter { it.sleepHours.containsKey(userId) }
+                    val avgSleepVal = if (examsWithSleep.isNotEmpty()) {
+                        examsWithSleep.mapNotNull { it.sleepHours[userId] }.average()
+                    } else 0.0
+
                     val totalHours = totalMs / 3600000.0
                     val efficiency = if (totalHours > 0.0027) avgActual / totalHours else 0.0
 
@@ -736,7 +742,7 @@ class MainViewModel : ViewModel() {
                         totalCoffee = coffee,
                         totalEnergy = energy,
                         totalBathroom = bathroom,
-                        avgSleep = 0.0,
+                        avgSleep = avgSleepVal,
                         avgActualGrade = avgActual,
                         avgExpectedGrade = avgExpected
                     )
