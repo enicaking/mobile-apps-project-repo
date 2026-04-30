@@ -49,7 +49,7 @@ fun ProfileScreen(
 
     // LOGICA PARA REALITY GAP (Diferencia Real vs Esperada)
     val myRanking = rankingEntries.find { it.uid == viewModel.getCurrentUserId() }
-    val realityGap = (myRanking?.avgActualGrade ?: 0.0) - (myRanking?.avgExpectedGrade ?: 0.0)
+    val realityGap = myRanking?.avgAccuracy ?: 0.0
     val gapValueColor = if (realityGap >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
 
     // LOGICA PARA EL BADGE (Nivel según horas)
