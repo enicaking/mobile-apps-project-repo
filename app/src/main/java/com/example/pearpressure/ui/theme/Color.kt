@@ -3,7 +3,7 @@ package com.example.pearpressure.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Paleta simple (puedes cambiar estos valores cuando quieras)
-val Primary = Color(0xFF6E56CF)
+val Primary = Color(0xFF89AC48)
 val OnPrimary = Color(0xFFFFFFFF)
 
 val Secondary = Color(0xFF4E9F9B)

@@ -9,6 +9,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
     primary = Primary,
@@ -36,22 +38,27 @@ private val DarkColorScheme = darkColorScheme(
  * Theme.kt: puts together Color, Shapes and Type
  * contentReference[oaicite:7]{index=7}
  */
+private val GreenColorScheme = lightColorScheme(
+    primary = Color(0xFF89AC48),
+    secondary = Color(0xFFC4DA70),
+    tertiary = Color(0xFFC4DA70),
+
+    primaryContainer = Color(0xFFC4DA70),
+    secondaryContainer = Color(0xFFEAF3C8),
+
+    onPrimary = Color.White,
+    onSecondary = Color(0xFF1F2A10),
+    onPrimaryContainer = Color(0xFF1F2A10),
+    onSecondaryContainer = Color(0xFF1F2A10)
+)
+
 @Composable
-fun SofiaTestTheme(
+fun TestTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // Material Design 3 can use “dynamic color”
-    // contentReference[oaicite:8]{index=8}
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = GreenColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
