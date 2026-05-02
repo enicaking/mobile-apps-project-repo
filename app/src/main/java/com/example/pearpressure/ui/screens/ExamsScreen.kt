@@ -31,6 +31,7 @@ import java.util.Date
 import java.util.Locale
 import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
+import com.example.pearpressure.ui.theme.*
 
 @Composable
 fun ExamsScreen(
@@ -158,6 +159,7 @@ fun ExamsScreen(
                         nowMs = nowMs,
                         currentUserId = currentUserId,
                         isOwner = isOwner,
+
                         onOpenInProgressExam = onOpenInProgressExam,
                         onOpenFinishedExam = {
                             examForResults = exam
@@ -444,11 +446,11 @@ private fun ExamCard(
     val hasExpected = exam.expectedGrades.containsKey(currentUserId)
     val hasReal = exam.actualGrades.containsKey(currentUserId)
 
-    val statusText = when {
-        !isPastDeadline -> "In Progress"
-        !hasExpected -> "Waiting for Expected"
-        !hasReal -> "Waiting for Final"
-        else -> "Finished"
+    val status = when {
+        !isPastDeadline -> ExamStatus.IN_PROGRESS
+        !hasExpected    -> ExamStatus.WAITING_EXPECTED
+        !hasReal        -> ExamStatus.WAITING_FINAL
+        else            -> ExamStatus.FINISHED
     }
 
     ElevatedCard(
@@ -470,7 +472,7 @@ private fun ExamCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(text = statusText, isPositive = !isPastDeadline || (hasExpected && hasReal))
+                StatusPill(status = status)
 
                 Spacer(modifier = Modifier.width(8.dp))
 
@@ -488,36 +490,17 @@ private fun ExamCard(
     }
 }
 
+enum class ExamStatus {
+    IN_PROGRESS, WAITING_EXPECTED, WAITING_FINAL, FINISHED
+}
+
 @Composable
-private fun StatusPill(text: String, isPositive: Boolean) {
-    val bg: Color
-    val fg: Color
-
-    when (text) {
-        "In Progress" -> {
-            bg = Color(0xFFE3F2FD) // Light blue
-            fg = Color(0xFF1565C0) // Dark blue
-        }
-
-        "Waiting for Expected" -> {
-            bg = Color(0xFFFFF3E0) // Light orange
-            fg = Color(0xFFEF6C00) // Dark orange
-        }
-
-        "Waiting for Final" -> {
-            bg = Color(0xFFF3E5F5) // Light purple
-            fg = Color(0xFF7B1FA2) // Dark purple
-        }
-
-        "Finished" -> {
-            bg = Color(0xFFE8F5E9) // Light green
-            fg = Color(0xFF2E7D32) // Dark green
-        }
-
-        else -> {
-            bg = MaterialTheme.colorScheme.surfaceVariant
-            fg = MaterialTheme.colorScheme.onSurfaceVariant
-        }
+private fun StatusPill(status: ExamStatus) {
+    val (bg, fg) = when (status) {
+        ExamStatus.IN_PROGRESS       -> StatusInProgressBg to StatusInProgressFg
+        ExamStatus.WAITING_EXPECTED  -> StatusWaitingExpBg to StatusWaitingExpFg
+        ExamStatus.WAITING_FINAL     -> StatusWaitingFinBg to StatusWaitingFinFg
+        ExamStatus.FINISHED          -> StatusFinishedBg   to StatusFinishedFg
     }
 
     Surface(
@@ -526,7 +509,12 @@ private fun StatusPill(text: String, isPositive: Boolean) {
         shape = MaterialTheme.shapes.medium
     ) {
         Text(
-            text = text,
+            text = when (status) {
+                ExamStatus.IN_PROGRESS      -> stringResource(R.string.exams_status_in_progress)
+                ExamStatus.WAITING_EXPECTED -> stringResource(R.string.exams_status_waiting_expected)
+                ExamStatus.WAITING_FINAL    -> stringResource(R.string.exams_status_waiting_final)
+                ExamStatus.FINISHED         -> stringResource(R.string.exams_status_finished)
+            },
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold

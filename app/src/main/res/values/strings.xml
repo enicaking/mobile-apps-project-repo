@@ -172,6 +172,12 @@
     <string name="unit_breaks">breaks</string>
     <string name="unit_hours">hrs</string>
 
+    <!-- StatusPill -->
+    <string name="exams_status_in_progress">In Progress</string>
+    <string name="exams_status_waiting_expected">Waiting for Expected</string>
+    <string name="exams_status_waiting_final">Waiting for Final</string>
+    <string name="exams_status_finished">Finished</string>
+
     <!-- Friends -->
     <string name="friends_screen_title">Friends</string>
     <string name="friends_search_label">Search email</string>
