@@ -1,4 +1,4 @@
-package com.example.pearpressure.ui
+package com.example.pearpressure.ui.screens
 
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
@@ -12,24 +12,25 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pearpressure.MainViewModel
+import com.example.pearpressure.notifications.CounterNotificationHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
-import com.example.pearpressure.notifications.CounterNotificationHelper
 
 
 private object QuickIcons {
@@ -51,6 +52,78 @@ private enum class BoostType(val label: String) {
     MONSTER("Monster"),
     ENERGETI("Energeti")
 }
+
+// ── Public entry point (previously StopwatchPage) ────────────────────────────
+
+@Composable
+fun StopwatchPage(
+    viewModel: MainViewModel,
+    subjectName: String,
+    examTitle: String,
+    examId: String,
+    endsAtEpochMs: Long,
+    onBack: () -> Unit,
+    onStudyStarted: () -> Unit = {}
+) {
+    var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    val infoText = formatCountdownDaysHours(endsAtEpochMs - nowMs)
+
+    LaunchedEffect(endsAtEpochMs) {
+        while (true) {
+            nowMs = System.currentTimeMillis()
+            delay(60_000)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header
+        Surface(tonalElevation = 2.dp) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onBack) { Text("← Go back") }
+                    Spacer(Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = subjectName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = examTitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+            }
+        }
+
+        // Stopwatch body
+        StopwatchScreen(
+            viewModel = viewModel,
+            examId = examId,
+            showTitle = false,
+            bottomInfoText = infoText,
+            onBack = onBack,
+            onStudyStarted = onStudyStarted
+        )
+    }
+}
+
+// ── Internal stopwatch body (previously StopwatchScreen in the same package) ─
 
 @Composable
 fun StopwatchScreen(
@@ -126,7 +199,6 @@ fun StopwatchScreen(
     var waterInput by remember { mutableStateOf("") }
     var waterError by remember { mutableStateOf<String?>(null) }
 
-
     val onQuickAction: (String) -> Unit = { action ->
         when (action) {
             "poop" -> showPoopConfirm = true
@@ -139,7 +211,6 @@ fun StopwatchScreen(
             }
         }
     }
-
 
     val context = LocalContext.current
 
@@ -160,7 +231,6 @@ fun StopwatchScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
             if (showTitle) {
                 Text(
                     text = "Stopwatch",
@@ -194,10 +264,7 @@ fun StopwatchScreen(
                         .height(52.dp),
                     onClick = {
                         val isFreshStart = !isRunning && displayMs == 0L
-
-                        if (isFreshStart) {
-                            onStudyStarted()
-                        }
+                        if (isFreshStart) onStudyStarted()
 
                         isRunning = true
                         startElapsedMs = SystemClock.elapsedRealtime()
@@ -286,7 +353,6 @@ fun StopwatchScreen(
                     subtitle = poopCount.toString(),
                     onClick = { onQuickAction("poop") }
                 )
-
                 QuickActionButton(
                     modifier = Modifier.weight(1f),
                     icon = QuickIcons.Water,
@@ -307,7 +373,6 @@ fun StopwatchScreen(
                     subtitle = coffeeTotal.toString(),
                     onClick = { onQuickAction("coffee") }
                 )
-
                 QuickActionButton(
                     modifier = Modifier.weight(1f),
                     icon = QuickIcons.Boost,
@@ -396,17 +461,13 @@ fun StopwatchScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = { showSummary = false }) {
-                    Text("Keep studying")
-                }
+                Button(onClick = { showSummary = false }) { Text("Keep studying") }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showSummary = false
                     onBack()
-                }) {
-                    Text("Go to Exams")
-                }
+                }) { Text("Go to Exams") }
             }
         )
     }
@@ -578,6 +639,8 @@ fun StopwatchScreen(
     }
 }
 
+// ── Private composables ───────────────────────────────────────────────────────
+
 @Composable
 private fun QuickActionButton(
     modifier: Modifier = Modifier,
@@ -656,11 +719,8 @@ private fun ParticipantStudyCard(
 
             when {
                 showPending -> {
-                    OutlinedButton(onClick = {}, enabled = false) {
-                        Text("Pending")
-                    }
+                    OutlinedButton(onClick = {}, enabled = false) { Text("Pending") }
                 }
-
                 showAddFriend -> {
                     FilledTonalButton(onClick = onAddFriend) {
                         Icon(Icons.Default.PersonAdd, contentDescription = "Add friend")
@@ -673,6 +733,8 @@ private fun ParticipantStudyCard(
     }
 }
 
+// ── Private helpers ───────────────────────────────────────────────────────────
+
 private fun formatDuration(ms: Long): String {
     val totalSeconds = ms / 1000
     val hours = totalSeconds / 3600
@@ -681,22 +743,31 @@ private fun formatDuration(ms: Long): String {
     return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
 }
 
-private fun formatDateTime(epochMs: Long): String {
-    return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(epochMs))
-}
+private fun formatDateTime(epochMs: Long): String =
+    SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(epochMs))
 
-private fun formatLiters(liters: Double): String {
-    return String.format(Locale.getDefault(), "%.1f L", liters)
-}
+private fun formatLiters(liters: Double): String =
+    String.format(Locale.getDefault(), "%.1f L", liters)
 
 private fun formatStudyTimeCompact(ms: Long): String {
     val totalMinutes = ms / 60000
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
-
     return when {
         hours > 0 -> "${hours}h ${minutes}m studied"
         minutes > 0 -> "${minutes}m studied"
         else -> "Less than 1 min studied"
+    }
+}
+
+private fun formatCountdownDaysHours(diffMs: Long): String {
+    if (diffMs <= 0L) return "The exam has finished."
+    val totalHours = diffMs / (1000L * 60 * 60)
+    val days = totalHours / 24
+    val hours = totalHours % 24
+    return when {
+        days > 0 && hours > 0 -> "$days days and $hours hours for the exam."
+        days > 0 -> "$days days until the exam."
+        else -> "$hours hours until the exam."
     }
 }

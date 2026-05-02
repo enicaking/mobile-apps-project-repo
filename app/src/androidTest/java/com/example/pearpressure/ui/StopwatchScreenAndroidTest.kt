@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.example.pearpressure.MainViewModel
+import com.example.pearpressure.ui.screens.StopwatchScreen
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
