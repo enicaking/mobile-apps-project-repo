@@ -9,6 +9,34 @@
     <string name="delete">Delete</string>
     <string name="leave">Leave</string>
 
+    <!-- Login -->
+    <string name="login_title_welcome_back">Welcome back</string>
+    <string name="login_title_create_account">Create account</string>
+    <string name="login_label_email">Email</string>
+    <string name="login_label_password">Password</string>
+    <string name="login_button_sign_up">Sign Up</string>
+    <string name="login_button_login">Login</string>
+    <string name="login_toggle_have_account">Already have an account? Login</string>
+    <string name="login_toggle_new_here">New here? Create account</string>
+
+    <!-- Complete Profile -->
+    <string name="profile_title">Complete your profile</string>
+    <string name="profile_subtitle">Enter your information before using the app.</string>
+    <string name="profile_label_full_name">Full name</string>
+    <string name="profile_label_username">Username</string>
+    <string name="profile_username_supporting_text">Must be unique</string>
+    <string name="profile_label_sex">Sex</string>
+    <string name="profile_label_birthday">Birthday</string>
+    <string name="profile_birthday_placeholder">Select your birthday</string>
+    <string name="profile_button_choose_birthday">Choose birthday</string>
+    <string name="profile_button_save">Save profile</string>
+
+    <!-- Profile - Sex options -->
+    <string name="profile_sex_male">Male</string>
+    <string name="profile_sex_female">Female</string>
+    <string name="profile_sex_other">Other</string>
+    <string name="profile_sex_prefer_not_to_say">Prefer not to say</string>
+
     <!-- Subjects -->
     <string name="subjects">Subjects</string>
     <string name="add_subject">Add Subject</string>
@@ -32,11 +60,11 @@
     <string name="metric">Metric</string>
     <string name="streak">🔥%1$d</string>
 
-    <!-- Friend Dialog -->
+    <!-- Ranking - Friend Dialog -->
     <string name="add_friend_title">Add Friend</string>
     <string name="send_request_message">Do you want to send a friend request to %1$s?</string>
 
-    <!-- Ranking Categories -->
+    <!-- Ranking - Categories -->
     <string name="cat_hard_work">Hard Work (Time)</string>
     <string name="cat_reality_gap">Your Guess</string>
     <string name="cat_study_efficiency">Study Efficiency</string>
@@ -49,7 +77,7 @@
     <string name="cat_sleep">Sleep</string>
     <string name="cat_no_data">No data available for this selection</string>
 
-    <!-- Units -->
+    <!-- Ranking - Units -->
     <string name="unit_pts">pts</string>
     <string name="unit_pts_hr">pts/hr</string>
     <string name="unit_glasses">glasses</string>

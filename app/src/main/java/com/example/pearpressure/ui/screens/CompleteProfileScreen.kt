@@ -14,6 +14,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.pearpressure.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun CompleteProfileScreen(
@@ -34,7 +36,12 @@ fun CompleteProfileScreen(
         return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(birthdayEpochMs))
     }
 
-    val sexOptions = listOf("Male", "Female", "Other", "Prefer not to say")
+    val sexOptions = listOf(
+        stringResource(R.string.profile_sex_male),
+        stringResource(R.string.profile_sex_female),
+        stringResource(R.string.profile_sex_other),
+        stringResource(R.string.profile_sex_prefer_not_to_say)
+    )
 
     Column(
         modifier = Modifier
@@ -46,14 +53,14 @@ fun CompleteProfileScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Complete your profile",
+            text = stringResource(R.string.profile_title),
             style = MaterialTheme.typography.headlineMedium
         )
 
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Enter your information before using the app.",
+            text = stringResource(R.string.profile_subtitle),
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -62,7 +69,7 @@ fun CompleteProfileScreen(
         OutlinedTextField(
             value = fullName,
             onValueChange = { fullName = it },
-            label = { Text("Full name") },
+            label = { Text(stringResource(R.string.profile_label_full_name)) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -73,15 +80,15 @@ fun CompleteProfileScreen(
             onValueChange = {
                 username = it.replace(" ", "").lowercase()
             },
-            label = { Text("Username") },
-            supportingText = { Text("Must be unique") },
+            label = { Text(stringResource(R.string.profile_label_username)) },
+            supportingText = { Text(stringResource(R.string.profile_username_supporting_text)) },
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text = "Sex",
+            text = stringResource(R.string.profile_label_sex),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.fillMaxWidth()
         )
@@ -112,8 +119,8 @@ fun CompleteProfileScreen(
             value = formattedBirthday(),
             onValueChange = {},
             readOnly = true,
-            label = { Text("Birthday") },
-            placeholder = { Text("Select your birthday") },
+            label = { Text(stringResource(R.string.profile_label_birthday)) },
+            placeholder = { Text(stringResource(R.string.profile_birthday_placeholder)) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -140,7 +147,7 @@ fun CompleteProfileScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Choose birthday")
+            Text(stringResource(R.string.profile_button_choose_birthday))
         }
 
         if (error != null) {
@@ -166,7 +173,7 @@ fun CompleteProfileScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Save profile")
+            Text(stringResource(R.string.profile_button_save))
         }
     }
 }
