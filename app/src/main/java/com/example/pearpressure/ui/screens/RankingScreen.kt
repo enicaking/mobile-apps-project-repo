@@ -20,6 +20,7 @@ import com.example.pearpressure.RankingScope
 import androidx.annotation.StringRes
 import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
+import com.example.pearpressure.ui.theme.*
 
 // 2. Ranking Types (Dropdown)
 
@@ -371,16 +372,16 @@ private fun RankingRow(
     val unit = category.unitRes()?.let { stringResource(it) }
 
     val rowColor = when (rank) {
-        1 -> Color(0xFFFFD700).copy(alpha = 0.15f)
-        2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f)
-        3 -> Color(0xFFCD7F32).copy(alpha = 0.15f)
+        1 -> RankOneColor.copy(alpha = 0.15f)
+        2 -> RankTwoColor.copy(alpha = 0.15f)
+        3 -> RankThreeColor.copy(alpha = 0.15f)
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val borderColor = when (rank) {
-        1 -> Color(0xFFFFD700)
-        2 -> Color(0xFFC0C0C0)
-        3 -> Color(0xFFCD7F32)
+        1 -> RankOneColor
+        2 -> RankTwoColor
+        3 -> RankThreeColor
         else -> Color.Transparent
     }
 
@@ -405,7 +406,7 @@ private fun RankingRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(entry.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.width(6.dp))
-                    val streakColor = if (entry.currentStreak > 0) Color(0xFFFF9800) else Color.LightGray
+                    val streakColor = if (entry.currentStreak > 0) StreakColor else Color.LightGray
                     Text(
                         text = stringResource(R.string.streak, entry.currentStreak),
                         fontWeight = FontWeight.Bold,
@@ -482,8 +483,8 @@ private fun RankingRow(
             }
 
             val valueColor = when {
-                category == RankingCategory.REALITY_GAP && realityGapValue > 0 -> Color(0xFF4CAF50)
-                category == RankingCategory.REALITY_GAP && realityGapValue < 0 -> Color(0xFFF44336)
+                category == RankingCategory.REALITY_GAP && realityGapValue > 0 -> ProfileGreenColor
+                category == RankingCategory.REALITY_GAP && realityGapValue < 0 -> ProfileRedColor
                 else -> MaterialTheme.colorScheme.primary
             }
 

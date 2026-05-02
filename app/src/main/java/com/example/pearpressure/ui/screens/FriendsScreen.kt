@@ -20,6 +20,8 @@ import com.example.pearpressure.IncomingFriendRequestUi
 import com.example.pearpressure.OutgoingFriendRequestUi
 import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
+import com.example.pearpressure.ui.theme.*
+
 
 @Composable
 fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
@@ -98,7 +100,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
 
             // --- INCOMING REQUESTS ---
             if (incoming.isNotEmpty()) {
-                item { SectionTitle(stringResource(R.string.friends_section_incoming), color = Color(0xFF4DB6AC)) }
+                item { SectionTitle(stringResource(R.string.friends_section_incoming), color = FriendRequestColor) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(incoming) { item ->
@@ -120,7 +122,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
 
             // --- OUTGOING REQUESTS --- (Width tightened so Cancel isn't too far)
             if (outgoing.isNotEmpty()) {
-                item { SectionTitle(stringResource(R.string.friends_section_outgoing), color = Color(0xFF4DB6AC)) }
+                item { SectionTitle(stringResource(R.string.friends_section_outgoing), color = FriendRequestColor) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(outgoing) { item ->
@@ -136,7 +138,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                                         Text(
                                             stringResource(R.string.friends_pending_to),
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = Color(0xFF4DB6AC),
+                                            color = FriendRequestColor,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(item.to.fullName.ifBlank { stringResource(R.string.friends_no_name) }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)

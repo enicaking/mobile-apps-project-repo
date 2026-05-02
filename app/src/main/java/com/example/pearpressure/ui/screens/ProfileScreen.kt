@@ -27,6 +27,7 @@ import com.example.pearpressure.RankingScope
 import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import com.example.pearpressure.ui.theme.*
 
 @SuppressLint("DefaultLocale")
 @Composable
@@ -54,15 +55,15 @@ fun ProfileScreen(
     // Reality Gap Logic (Calculated with expected vs final grade)
     val myRanking = rankingEntries.find { it.uid == viewModel.getCurrentUserId() }
     val realityGap = myRanking?.avgAccuracy ?: 0.0
-    val gapValueColor = if (realityGap >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val gapValueColor = if (realityGap >= 0) ProfileGreenColor else ProfileRedColor
 
     // Badge Logic (Calculated according to hours studied)
     val totalHours = totalStudyTime / 3600000.0
     val (levelBadge, badgeColor) = when {
-        totalHours < 1  -> stringResource(R.string.profile_badge_mini_pear)   to Color(0xFFF44336)
-        totalHours < 10 -> stringResource(R.string.profile_badge_focus_pear)  to Color(0xFFFF9800)
-        totalHours < 50 -> stringResource(R.string.profile_badge_master_pear) to Color(0xFF8BC34A)
-        else            -> stringResource(R.string.profile_badge_gold_pear)   to Color(0xFFDAA520)
+        totalHours < 1  -> stringResource(R.string.profile_badge_mini_pear)   to MiniPearColor
+        totalHours < 10 -> stringResource(R.string.profile_badge_focus_pear)  to FocusPearColor
+        totalHours < 50 -> stringResource(R.string.profile_badge_master_pear) to MasterPearColor
+        else            -> stringResource(R.string.profile_badge_gold_pear)   to GoldPearColor
     }
 
     // Study time formatting
@@ -145,7 +146,7 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Streak, Total time studied, alltime reality gap
-        val streakColor = if (streak > 0) Color(0xFFFF9800) else Color.Gray
+        val streakColor = if (streak > 0) StreakColor else Color.Gray
 
         Card(
             modifier = Modifier.fillMaxWidth(),

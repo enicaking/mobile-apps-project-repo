@@ -2,7 +2,7 @@ package com.example.pearpressure.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta simple (puedes cambiar estos valores cuando quieras)
+// Simple palette
 val Primary = Color(0xFF6E56CF)
 val OnPrimary = Color(0xFFFFFFFF)
 
@@ -31,3 +31,25 @@ val StatusWaitingFinFg  = Color(0xFF7B1FA2)
 
 val StatusFinishedBg    = Color(0xFFE8F5E9)
 val StatusFinishedFg    = Color(0xFF2E7D32)
+
+
+// Friend requests
+val FriendRequestColor = Color(0xFF4DB6AC)
+
+// Reality Gap
+val ProfileRedColor = Color(0xFFF44336)
+val ProfileGreenColor = Color(0xFF4CAF50)
+
+// User Badge
+val MiniPearColor = Color(0xFFF44336)
+val FocusPearColor = Color(0xFFFF9800)
+val MasterPearColor = Color(0xFF8BC34A)
+val GoldPearColor = Color(0xFFDAA520)
+
+// Streak
+val StreakColor = Color(0xFFFF9800)
+
+// User Rank
+val RankOneColor = Color(0xFFFFD700)
+val RankTwoColor = Color(0xFFC0C0C0)
+val RankThreeColor = Color(0xFFCD7F32)
