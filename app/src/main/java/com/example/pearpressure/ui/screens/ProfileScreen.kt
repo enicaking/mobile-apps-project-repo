@@ -1,5 +1,6 @@
 package com.example.pearpressure.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color // FOR COLOR
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -24,7 +24,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.RankingScope
+import com.example.pearpressure.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun ProfileScreen(
     viewModel: MainViewModel,
@@ -33,7 +37,7 @@ fun ProfileScreen(
     // Load profile when entering this screen
     LaunchedEffect(Unit) {
         viewModel.loadCurrentUserProfile()
-        // Cargamos ranking para tener los datos de notas actualizados
+        // Load Ranking function to have updated information
         viewModel.loadRanking(scope = RankingScope.TOTAL)
     }
 
@@ -42,23 +46,34 @@ fun ProfileScreen(
     val rankingEntries by viewModel.rankingEntries.collectAsState()
 
     val email = currentUserProfile?.email ?: viewModel.getCurrentUserEmail()
-    val username = currentUserProfile?.username ?: "No username"
+    val username = currentUserProfile?.username ?: stringResource(R.string.profile_no_username)
     val totalStudyTime = currentUserProfile?.totalStudyTime ?: 0L
-    // Recuperamos la racha del perfil
+    // Streak
     val streak = currentUserProfile?.currentStreak ?: 0
 
-    // LOGICA PARA REALITY GAP (Diferencia Real vs Esperada)
+    // Reality Gap Logic (Calculated with expected vs final grade)
     val myRanking = rankingEntries.find { it.uid == viewModel.getCurrentUserId() }
     val realityGap = myRanking?.avgAccuracy ?: 0.0
     val gapValueColor = if (realityGap >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
 
-    // LOGICA PARA EL BADGE (Nivel según horas)
+    // Badge Logic (Calculated according to hours studied)
     val totalHours = totalStudyTime / 3600000.0
     val (levelBadge, badgeColor) = when {
-        totalHours < 1 -> "Mini Pear 🍐" to Color(0xFFF44336)
-        totalHours < 10 -> "Focus Pear 🍐" to Color(0xFFFF9800)
-        totalHours < 50 -> "Master Pear 🍐" to Color(0xFF8BC34A)
-        else -> "Gold Pear 🍐" to Color(0xFFDAA520)
+        totalHours < 1  -> stringResource(R.string.profile_badge_mini_pear)   to Color(0xFFF44336)
+        totalHours < 10 -> stringResource(R.string.profile_badge_focus_pear)  to Color(0xFFFF9800)
+        totalHours < 50 -> stringResource(R.string.profile_badge_master_pear) to Color(0xFF8BC34A)
+        else            -> stringResource(R.string.profile_badge_gold_pear)   to Color(0xFFDAA520)
+    }
+
+    // Study time formatting
+    val totalSeconds = totalStudyTime / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+
+    val timeFormatted = when {
+        hours > 0   -> stringResource(R.string.profile_time_hours_minutes, hours, minutes)
+        minutes > 0 -> stringResource(R.string.profile_time_minutes, minutes)
+        else        -> stringResource(R.string.profile_time_less_than_one_min)
     }
 
     Column(
@@ -69,13 +84,13 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.Top
     ) {
         Text(
-            text = "User Profile",
+            text = stringResource(R.string.profile_screen_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        // PERFIL AHORA ES CIRCULAR CON INICIAL
+        // Circular Profile Display
         Surface(
             modifier = Modifier.size(100.dp),
             shape = CircleShape,
@@ -93,7 +108,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // MOSTRAR BADGE DE NIVEL
+        // Badge
         Surface(
             color = badgeColor.copy(alpha = 0.2f),
             shape = RoundedCornerShape(16.dp)
@@ -110,7 +125,7 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Logged in as:",
+            text = stringResource(R.string.profile_logged_in_as),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.secondary
         )
@@ -129,7 +144,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // MOSTRAR RACHA, TIEMPO Y REALITY GAP
+        // Streak, Total time studied, alltime reality gap
         val streakColor = if (streak > 0) Color(0xFFFF9800) else Color.Gray
 
         Card(
@@ -147,7 +162,13 @@ fun ProfileScreen(
                     Icon(imageVector = Icons.Default.Whatshot, contentDescription = null, tint = streakColor)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (streak > 0) "Study Streak: $streak days 🔥" else "No active streak ❄️",
+                        text = if (streak > 0)
+                            pluralStringResource(
+                                id = R.plurals.profile_streak_active,
+                                count = streak,
+                                streak
+                            )
+                        else stringResource(R.string.profile_streak_inactive),
                         color = streakColor,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -156,24 +177,29 @@ fun ProfileScreen(
 
                 Divider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
 
-                // ESTADISTICA DE TIEMPO
+                // Total time studied
                 Text(
-                    text = "Total time studied: ${formatStudyTime(totalStudyTime)}",
+                    text = stringResource(R.string.profile_total_time_studied, timeFormatted),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
 
-                // SECCION ALL TIME REALITY GAP (Label negro, Valor en color)
+                // All Time Reality Gap
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = Color.Black, fontWeight = FontWeight.Bold)) {
-                            append("All Time Reality Gap: ")
-                        }
-                        withStyle(style = SpanStyle(color = gapValueColor, fontWeight = FontWeight.Bold)) {
-                            val sign = if (realityGap >= 0) "+" else ""
-                            append("$sign${String.format("%.2f", realityGap)} pts")
-                        }
+                        val sign = if (realityGap >= 0) "+" else ""
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(style = SpanStyle(color = Color.Black, fontWeight = FontWeight.Bold)) {
+                                    append(stringResource(R.string.profile_reality_gap_label))
+                                }
+                                withStyle(style = SpanStyle(color = gapValueColor, fontWeight = FontWeight.Bold)) {
+                                    append("$sign${String.format("%.2f", realityGap)} pts")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     },
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -195,21 +221,9 @@ fun ProfileScreen(
         ) {
             Icon(imageVector = Icons.Default.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Sign Out", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.profile_button_sign_out), fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-private fun formatStudyTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes} min"
-        else -> "Less than 1 min"
     }
 }

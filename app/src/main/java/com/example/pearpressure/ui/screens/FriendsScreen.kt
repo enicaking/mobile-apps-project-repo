@@ -18,6 +18,8 @@ import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.data.UserProfile
 import com.example.pearpressure.IncomingFriendRequestUi
 import com.example.pearpressure.OutgoingFriendRequestUi
+import com.example.pearpressure.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
@@ -47,7 +49,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Text("Friends", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.friends_screen_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             }
 
             // Search Section - Button now on the right to save vertical space
@@ -61,7 +63,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Search email") },
+                            label = { Text(stringResource(R.string.friends_search_label)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -70,7 +72,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                             modifier = Modifier.height(56.dp), // Match TextField height
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Search")
+                            Text(stringResource(R.string.search))
                         }
                     }
 
@@ -79,13 +81,15 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                     searchResult?.let { u ->
                         val canAdd = u.uid.isNotBlank() && u.uid != myUid && !friendUids.contains(u.uid)
                         UserCard(
-                            title = "Search result",
+                            title = stringResource(R.string.friends_search_result_title),
                             user = u,
                             trailing = {
                                 OutlinedButton(
                                     onClick = { viewModel.sendFriendRequest(u.uid) },
                                     enabled = canAdd
-                                ) { Text(if (u.uid == myUid) "You" else if (!canAdd) "Added" else "Add") }
+                                ) {
+                                    Text(if (u.uid == myUid) stringResource(R.string.friends_add_button_you) else if (!canAdd) stringResource(R.string.friends_add_button_added) else stringResource(R.string.add)) }
+
                             }
                         )
                     }
@@ -94,18 +98,18 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
 
             // --- INCOMING REQUESTS ---
             if (incoming.isNotEmpty()) {
-                item { SectionTitle("Incoming requests", color = Color(0xFF4DB6AC)) }
+                item { SectionTitle(stringResource(R.string.friends_section_incoming), color = Color(0xFF4DB6AC)) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(incoming) { item ->
                             Card(modifier = Modifier.width(190.dp)) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(item.from.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text(item.from.fullName.ifBlank { stringResource(R.string.friends_no_name) }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                                     Text(item.from.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                                        Button(onClick = { viewModel.acceptRequest(item.request) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("Accept", fontSize = 12.sp) }
-                                        OutlinedButton(onClick = { viewModel.declineRequest(item.request) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("Decline", fontSize = 12.sp) }
+                                        Button(onClick = { viewModel.acceptRequest(item.request) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.accept), fontSize = 12.sp) }
+                                        OutlinedButton(onClick = { viewModel.declineRequest(item.request) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.decline), fontSize = 12.sp) }
                                     }
                                 }
                             }
@@ -116,7 +120,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
 
             // --- OUTGOING REQUESTS --- (Width tightened so Cancel isn't too far)
             if (outgoing.isNotEmpty()) {
-                item { SectionTitle("Outgoing requests", color = Color(0xFF4DB6AC)) }
+                item { SectionTitle(stringResource(R.string.friends_section_outgoing), color = Color(0xFF4DB6AC)) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(outgoing) { item ->
@@ -130,12 +134,12 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(
-                                            "Pending to:",
+                                            stringResource(R.string.friends_pending_to),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = Color(0xFF4DB6AC),
                                             fontWeight = FontWeight.SemiBold
                                         )
-                                        Text(item.to.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                                        Text(item.to.fullName.ifBlank { stringResource(R.string.friends_no_name) }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                                         Text(item.to.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                                     }
 
@@ -143,7 +147,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                                         onClick = { requestToCancel = item },
                                         contentPadding = PaddingValues(start = 4.dp)
                                     ) {
-                                        Text("Cancel", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                        Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -155,9 +159,9 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
 
             // Friends list
-            item { SectionTitle("Your friends", color = MaterialTheme.colorScheme.primary) }
+            item { SectionTitle(stringResource(R.string.friends_section_your_friends), color = MaterialTheme.colorScheme.primary) }
             if (friends.isEmpty()) {
-                item { EmptyHint("No friends yet.") }
+                item { EmptyHint(stringResource(R.string.friends_empty_hint)) }
             } else {
                 items(friends) { u ->
                     UserCard(
@@ -165,7 +169,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                         user = u,
                         trailing = {
                             TextButton(onClick = { userToRemove = u }) {
-                                Text("Remove", color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
                             }
                         }
                     )
@@ -178,24 +182,24 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
     userToRemove?.let { user ->
         AlertDialog(
             onDismissRequest = { userToRemove = null },
-            title = { Text("Remove Friend") },
-            text = { Text("Are you sure you want to remove ${user.fullName.ifBlank { user.email }}?") },
+            title = { Text(stringResource(R.string.friends_dialog_remove_title)) },
+            text = { Text(stringResource(R.string.friends_dialog_remove_text, user.fullName.ifBlank { user.email })) },
             confirmButton = {
-                Button(onClick = { viewModel.removeFriend(user.uid); userToRemove = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Remove") }
+                Button(onClick = { viewModel.removeFriend(user.uid); userToRemove = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.remove))  }
             },
-            dismissButton = { TextButton(onClick = { userToRemove = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { userToRemove = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
     requestToCancel?.let { item ->
         AlertDialog(
             onDismissRequest = { requestToCancel = null },
-            title = { Text("Cancel Request") },
-            text = { Text("Do you want to cancel the request to ${item.to.fullName}?") },
+            title = { Text(text = stringResource(R.string.friends_dialog_cancel_title)) },
+            text = { Text(text = stringResource(R.string.friends_dialog_cancel_text, item.to.fullName)) },
             confirmButton = {
-                Button(onClick = { viewModel.declineRequest(item.request); requestToCancel = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Confirm") }
+                Button(onClick = { viewModel.declineRequest(item.request); requestToCancel = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.confirm)) }
             },
-            dismissButton = { TextButton(onClick = { requestToCancel = null }) { Text("Back") } }
+            dismissButton = { TextButton(onClick = { requestToCancel = null }) { Text(stringResource(R.string.back)) } }
         )
     }
 }
@@ -222,7 +226,7 @@ private fun UserCard(title: String?, user: UserProfile, trailing: (@Composable (
         Row(modifier = Modifier.padding(14.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 if (title != null) Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                Text(user.fullName.ifBlank { "No name" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(user.fullName.ifBlank { stringResource(R.string.friends_no_name) }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(user.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (trailing != null) trailing()

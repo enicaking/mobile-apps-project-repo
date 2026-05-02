@@ -8,6 +8,16 @@
     <string name="save">Save</string>
     <string name="delete">Delete</string>
     <string name="leave">Leave</string>
+    <string name="remove">Remove</string>
+    <string name="add">Add</string>
+    <string name="confirm">Confirm</string>
+    <string name="back">Back</string>
+    <string name="search">Search</string>
+    <string name="accept">Accept</string>
+    <string name="decline">Decline</string>
+    <string name="edit">Edit</string>
+    <string name="update">Update</string>
+
 
     <!-- Login -->
     <string name="login_title_welcome_back">Welcome back</string>
@@ -31,11 +41,39 @@
     <string name="profile_button_choose_birthday">Choose birthday</string>
     <string name="profile_button_save">Save profile</string>
 
-    <!-- Profile - Sex options -->
+    <!-- Complete Profile - Sex options -->
     <string name="profile_sex_male">Male</string>
     <string name="profile_sex_female">Female</string>
     <string name="profile_sex_other">Other</string>
     <string name="profile_sex_prefer_not_to_say">Prefer not to say</string>
+
+    <!-- Profile -->
+    <string name="profile_screen_title">User Profile</string>
+    <string name="profile_logged_in_as">Logged in as:</string>
+    <string name="profile_no_username">No username</string>
+    <plurals name="profile_streak_active">
+        <item quantity="one">Study Streak: %1$d day 🔥</item>
+        <item quantity="other">Study Streak: %1$d days 🔥</item>
+    </plurals>
+    <string name="profile_streak_inactive">No active streak ❄️</string>
+    <string name="profile_button_sign_out">Sign Out</string>
+
+    <!-- Profile - Badges -->
+    <string name="profile_badge_mini_pear">Mini Pear 🍐</string>
+    <string name="profile_badge_focus_pear">Focus Pear 🍐</string>
+    <string name="profile_badge_master_pear">Master Pear 🍐</string>
+    <string name="profile_badge_gold_pear">Gold Pear 🍐</string>
+
+    <!-- Profile - Stats -->
+    <string name="profile_total_time_studied">Total time studied: %1$s</string>
+    <string name="profile_reality_gap_label">All Time Reality Gap: </string>
+    <string name="profile_reality_gap_value">%1$s%2$.2f pts</string>
+
+    <!-- Profile - Study time formatting -->
+    <string name="profile_time_hours_minutes">%1$dh %2$dm</string>
+    <string name="profile_time_minutes">%1$d min</string>
+    <string name="profile_time_less_than_one_min">Less than 1 min</string>
+
 
     <!-- Subjects -->
     <string name="subjects">Subjects</string>
@@ -50,6 +88,54 @@
     <string name="name">Name</string>
     <string name="dialog_delete_subject">Are you sure you want to delete \'%1$s\'? This action will permanently remove the subject and all associated exams.</string>
     <string name="dialog_leave_subject">Are you sure you want to leave \'%1$s\'? You will no longer have access to this subject\'s data.</string>
+
+
+    <!-- ExamsScreen -->
+    <string name="exams_button_add_member">Add Member</string>
+    <string name="exams_button_add_exam">Add Exam</string>
+    <string name="exams_empty_hint">No exams found.\nTap \'Add Exam\' to create one.</string>
+
+    <!-- Create/Edit Exam Dialog -->
+    <string name="exams_dialog_new_title">New Exam</string>
+    <string name="exams_dialog_edit_title">Edit Exam</string>
+    <string name="exams_dialog_label_exam_title">Exam Title</string>
+    <string name="exams_dialog_label_max_grade">Max Grade (Scale)</string>
+    <string name="exams_dialog_ends_at">Ends at: %1$s</string>
+    <string name="exams_dialog_ends_at_not_set">Not set</string>
+    <string name="exams_dialog_button_set_date">Set Date</string>
+
+    <!-- Add Friend Dialog -->
+    <string name="exams_dialog_add_friend_title">Add Friend to Subject</string>
+    <string name="exams_dialog_search_friends_label">Search friends</string>
+
+    <!-- Results Dialog titles -->
+    <string name="exams_results_title_post_exam">Post-Exam Info</string>
+    <string name="exams_results_title_final">Final Result</string>
+    <string name="exams_results_title_edit">Edit %1$s</string>
+
+    <!-- Results Dialog content -->
+    <string name="exams_results_exam_scale">Exam Scale: /%1$s</string>
+    <string name="exams_results_numeric_hint">Please use numeric format (e.g., 8.5 or 7)</string>
+    <string name="exams_results_label_expected_grade">Expected Grade</string>
+    <string name="exams_results_label_sleep_hours">Sleep Hours</string>
+    <string name="exams_results_stats_saved">Stats saved! Now, enter your Final grade:</string>
+    <string name="exams_results_label_final_grade">Final Grade</string>
+    <string name="exams_results_label_expected">Expected</string>
+    <string name="exams_results_label_sleep">Sleep</string>
+    <string name="exams_results_sleep_value">%1$sh</string>
+
+    <!-- Results Dialog buttons -->
+    <string name="exams_results_button_edit_stats">Edit Stats</string>
+    <string name="exams_results_button_got_it">Got it!</string>
+    <string name="exams_results_button_save">Save Information</string>
+
+    <!-- Delete Exam Dialog -->
+    <string name="exams_dialog_delete_title">Delete Exam</string>
+    <string name="exams_dialog_delete_text">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
+
+    <!-- ExamCard -->
+    <string name="exams_card_deadline">Deadline: %1$s</string>
+
 
     <!-- Rankings -->
     <string name="subject">Subject</string>
@@ -85,5 +171,32 @@
     <string name="unit_cans">cans</string>
     <string name="unit_breaks">breaks</string>
     <string name="unit_hours">hrs</string>
+
+    <!-- Friends -->
+    <string name="friends_screen_title">Friends</string>
+    <string name="friends_search_label">Search email</string>
+    <string name="friends_search_result_title">Search result</string>
+
+    <!-- Friend - Add button states -->
+    <string name="friends_add_button_you">You</string>
+    <string name="friends_add_button_added">Added</string>
+
+    <!-- Friend - Sections -->
+    <string name="friends_section_incoming">Incoming requests</string>
+    <string name="friends_section_outgoing">Outgoing requests</string>
+    <string name="friends_section_your_friends">Your friends</string>
+    <string name="friends_empty_hint">No friends yet.</string>
+    <string name="friends_no_name">No name</string>
+
+    <!-- Friend - Request actions -->
+    <string name="friends_pending_to">Pending to:</string>
+    <string name="friends_dialog_cancel_title">Cancel Request</string>
+    <string name="friends_dialog_cancel_text">Do you want to cancel the request to %1$s?</string>
+
+
+    <!-- Friend - Remove dialog -->
+    <string name="friends_dialog_remove_title">Remove Friend</string>
+    <string name="friends_dialog_remove_text">Are you sure you want to remove %1$s?</string>
+
 
 </resources>
