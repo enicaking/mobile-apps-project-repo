@@ -1,3 +1,42 @@
 <resources>
     <string name="app_name">PearPressure</string>
+
+    <!-- Dialog -->
+    <string name="add_friend_title">Add Friend</string>
+    <string name="send_request_message">Do you want to send a friend request to %1$s?</string>
+    <string name="send">Send</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Ranking Categories -->
+    <string name="cat_hard_work">Hard Work (Time)</string>
+    <string name="cat_reality_gap">Your Guess</string>
+    <string name="cat_study_efficiency">Study Efficiency</string>
+    <string name="cat_water">Water Intake</string>
+    <string name="cat_coffee">Coffee Consumed</string>
+    <string name="cat_energy">Energy Drinks</string>
+    <string name="cat_bathroom">Bathroom Breaks</string>
+    <string name="cat_grade_actual">Final Grade</string>
+    <string name="cat_grade_expected">Expected Grade</string>
+    <string name="cat_sleep">Sleep</string>
+    <string name="cat_no_data">No data available for this selection</string>
+
+    <!-- Units -->
+    <string name="unit_pts">pts</string>
+    <string name="unit_pts_hr">pts/hr</string>
+    <string name="unit_glasses">glasses</string>
+    <string name="unit_cups">cups</string>
+    <string name="unit_cans">cans</string>
+    <string name="unit_breaks">breaks</string>
+    <string name="unit_hours">hrs</string>
+
+    <!-- Rankings -->
+    <string name="subject">Subject</string>
+    <string name="select_subject">Select Subject</string>
+    <string name="change">Change</string>
+    <string name="exam">Exam</string>
+    <string name="all_exams">All Exams</string>
+    <string name="all_exams_total">All Exams (Total)</string>
+    <string name="metric">Metric</string>
+    <string name="streak">🔥%1$d</string>
+
 </resources>

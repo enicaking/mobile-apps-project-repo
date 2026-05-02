@@ -25,7 +25,7 @@ import android.content.Context
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
-    //MainViewModel: objeto donde se guardan y gestionan datos como asignaturas y exámenes
+    //MainViewModel: connection to Firestore database
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
