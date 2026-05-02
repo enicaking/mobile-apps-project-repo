@@ -31,11 +31,36 @@
     <string name="profile_button_choose_birthday">Choose birthday</string>
     <string name="profile_button_save">Save profile</string>
 
-    <!-- Profile - Sex options -->
+    <!-- Complete Profile - Sex options -->
     <string name="profile_sex_male">Male</string>
     <string name="profile_sex_female">Female</string>
     <string name="profile_sex_other">Other</string>
     <string name="profile_sex_prefer_not_to_say">Prefer not to say</string>
+
+    <!-- Profile -->
+    <string name="profile_screen_title">User Profile</string>
+    <string name="profile_logged_in_as">Logged in as:</string>
+    <string name="profile_no_username">No username</string>
+    <string name="profile_streak_active">Study Streak: %1$d days 🔥</string>
+    <string name="profile_streak_inactive">No active streak ❄️</string>
+    <string name="profile_button_sign_out">Sign Out</string>
+
+    <!-- Profile - Badges -->
+    <string name="profile_badge_mini_pear">Mini Pear 🍐</string>
+    <string name="profile_badge_focus_pear">Focus Pear 🍐</string>
+    <string name="profile_badge_master_pear">Master Pear 🍐</string>
+    <string name="profile_badge_gold_pear">Gold Pear 🍐</string>
+
+    <!-- Profile - Stats -->
+    <string name="profile_total_time_studied">Total time studied: %1$s</string>
+    <string name="profile_reality_gap_label">All Time Reality Gap: </string>
+    <string name="profile_reality_gap_value">%1$s%2$.2f pts</string>
+
+    <!-- Profile - Study time formatting -->
+    <string name="profile_time_hours_minutes">%1$dh %2$dm</string>
+    <string name="profile_time_minutes">%1$d min</string>
+    <string name="profile_time_less_than_one_min">Less than 1 min</string>
+
 
     <!-- Subjects -->
     <string name="subjects">Subjects</string>
