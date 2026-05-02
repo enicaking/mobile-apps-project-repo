@@ -26,6 +26,7 @@ import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.RankingScope
 import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 
 @SuppressLint("DefaultLocale")
 @Composable
@@ -161,7 +162,12 @@ fun ProfileScreen(
                     Icon(imageVector = Icons.Default.Whatshot, contentDescription = null, tint = streakColor)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (streak > 0) stringResource(R.string.profile_streak_active, streak)
+                        text = if (streak > 0)
+                            pluralStringResource(
+                                id = R.plurals.profile_streak_active,
+                                count = streak,
+                                streak
+                            )
                         else stringResource(R.string.profile_streak_inactive),
                         color = streakColor,
                         style = MaterialTheme.typography.titleMedium,
