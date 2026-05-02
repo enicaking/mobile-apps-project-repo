@@ -1,8 +1,7 @@
 package com.example.pearpressure.ui.theme
-
 import androidx.compose.ui.graphics.Color
 
-// Paleta simple (puedes cambiar estos valores cuando quieras)
+// Simple Palette
 val Primary = Color(0xFF89AC48)
 val OnPrimary = Color(0xFFFFFFFF)
 
@@ -41,7 +40,7 @@ val FriendRequestColor = Color(0xFF4DB6AC)
 val ProfileRedColor = Color(0xFFF44336)
 val ProfileGreenColor = Color(0xFF4CAF50)
 
-// User Badge
+// User Badges
 val MiniPearColor = Color(0xFFF44336)
 val FocusPearColor = Color(0xFFFF9800)
 val MasterPearColor = Color(0xFF8BC34A)
