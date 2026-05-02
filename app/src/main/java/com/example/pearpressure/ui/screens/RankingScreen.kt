@@ -17,22 +17,45 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.RankingEntryUi
 import com.example.pearpressure.RankingScope
+import androidx.annotation.StringRes
+import com.example.pearpressure.R
+import androidx.compose.ui.res.stringResource
 
 // 2. Ranking Types (Dropdown)
-enum class RankingCategory(val label: String, val unit: String) {
-    HARD_WORK("Hard Work (Time)", ""),
-    REALITY_GAP("Your Guess", "pts"),
-    STUDY_EFFICIENCY("Study Efficiency", "pts/hr"), // UPDATED NAME
-    HABIT_WATER("Water Intake", "glasses"),
-    HABIT_COFFEE("Coffee Consumed", "cups"),
-    HABIT_ENERGY("Energy Drinks", "cans"),
-    HABIT_BATHROOM("Bathroom Breaks", "breaks"),
 
-    // FIXED: Removed the hardcoded "/10" so it doesn't conflict with your new maxGrade system
-    GRADE_ACTUAL("Final Grade", ""),
-    GRADE_EXPECTED("Expected Grade", ""),
-    SLEEP("Sleep", "hrs")
+@StringRes
+fun RankingCategory.labelRes(): Int = when (this) {
+    RankingCategory.HARD_WORK -> R.string.cat_hard_work
+    RankingCategory.REALITY_GAP -> R.string.cat_reality_gap
+    RankingCategory.STUDY_EFFICIENCY -> R.string.cat_study_efficiency
+    RankingCategory.HABIT_WATER -> R.string.cat_water
+    RankingCategory.HABIT_COFFEE -> R.string.cat_coffee
+    RankingCategory.HABIT_ENERGY -> R.string.cat_energy
+    RankingCategory.HABIT_BATHROOM -> R.string.cat_bathroom
+    RankingCategory.GRADE_ACTUAL -> R.string.cat_grade_actual
+    RankingCategory.GRADE_EXPECTED -> R.string.cat_grade_expected
+    RankingCategory.SLEEP -> R.string.cat_sleep
 }
+
+@StringRes
+fun RankingCategory.unitRes(): Int? = when (this) {
+    RankingCategory.REALITY_GAP -> R.string.unit_pts
+    RankingCategory.STUDY_EFFICIENCY -> R.string.unit_pts_hr
+    RankingCategory.HABIT_WATER -> R.string.unit_glasses
+    RankingCategory.HABIT_COFFEE -> R.string.unit_cups
+    RankingCategory.HABIT_ENERGY -> R.string.unit_cans
+    RankingCategory.HABIT_BATHROOM -> R.string.unit_breaks
+    RankingCategory.SLEEP -> R.string.unit_hours
+    else -> null
+}
+
+enum class RankingCategory {
+    HARD_WORK, REALITY_GAP, STUDY_EFFICIENCY, HABIT_WATER, HABIT_COFFEE,
+    HABIT_ENERGY, HABIT_BATHROOM, GRADE_ACTUAL, GRADE_EXPECTED, SLEEP
+}
+
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,15 +84,14 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     // UI State for Friend Confirmation
     var userToConfirm by remember { mutableStateOf<RankingEntryUi?>(null) }
 
-    // CARGA AUTOMÁTICA DE EXÁMENES
-    // Si ya hay una asignatura seleccionada al entrar, cargamos sus exámenes
+    // Loading exams for a selected subject
     LaunchedEffect(selectedSubjectId) {
         selectedSubjectId?.let { id ->
             viewModel.loadExams(id)
         }
     }
-    // --- AUTOMATIC REFRESH ---
-    // Triggers whenever Subject, Exam, or Scope changes
+
+    // Refresh: Triggers whenever Subject, Exam, or Scope changes
     LaunchedEffect(selectedSubjectId, selectedExamId, selectedScope) {
         viewModel.loadRanking(examId = selectedExamId, scope = selectedScope)
     }
@@ -83,7 +105,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     val hasMyFinalGrade = currentSelectedExam?.actualGrades?.containsKey(currentUserId) == true
     val hasMySleepHours = currentSelectedExam?.sleepHours?.containsKey(currentUserId) == true
 
-    // FILTRO DE CATEGORÍAS (Respetando la lógica de "no mostrar si no hay datos propios")
+    // Scope filter that changes based on available data
     val availableCategories = RankingCategory.entries.filter { category ->
         when (category) {
             RankingCategory.HARD_WORK,
@@ -116,7 +138,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         hasMyExpectedGrade,
         hasMyFinalGrade,
         hasMySleepHours,
-        entries // Añadimos entries para que revalúe si aparecen datos promediados
+        entries // Add entries to check if averaged out data appears
     ) {
         if (selectedCategory !in availableCategories) {
             selectedCategory = RankingCategory.HARD_WORK
@@ -141,14 +163,17 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Subject", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.subject),
+                            style = MaterialTheme.typography.labelSmall)
                         Text(
-                            text = currentSubject?.name ?: "Select Subject",
+                            text = currentSubject?.name ?: stringResource(R.string.select_subject),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Text("Change", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text(text = stringResource(R.string.change),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge)
                 }
             }
 
@@ -177,10 +202,10 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = exams.find { it.id == selectedExamId }?.title ?: "All Exams",
+                        value = exams.find { it.id == selectedExamId }?.title ?: stringResource(R.string.all_exams),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Exam") },
+                        label = { Text(text = stringResource(R.string.exam)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = examExpanded) },
                         modifier = Modifier.menuAnchor()
                     )
@@ -189,7 +214,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                         onDismissRequest = { examExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("All Exams (Total)") },
+                            text = { Text(text = stringResource(R.string.all_exams_total)) },
                             onClick = {
                                 selectedExamId = null
                                 examExpanded = false
@@ -211,10 +236,10 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = selectedCategory.label,
+                        value = stringResource(selectedCategory.labelRes()),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Metric") },
+                        label = { Text(text = stringResource(R.string.metric)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                         modifier = Modifier.menuAnchor()
                     )
@@ -224,7 +249,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     ) {
                         availableCategories.forEach { cat ->
                             DropdownMenuItem(
-                                text = { Text(cat.label) },
+                                text = { Text(stringResource(cat.labelRes())) },
                                 onClick = {
                                     selectedCategory = cat
                                     categoryExpanded = false
@@ -255,7 +280,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
 
             if (entries.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No data available for this selection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = stringResource(R.string.cat_no_data), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 LazyColumn(
@@ -287,16 +312,20 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     userToConfirm?.let { entry ->
         AlertDialog(
             onDismissRequest = { userToConfirm = null },
-            title = { Text("Add Friend") },
-            text = { Text("Do you want to send a friend request to ${entry.userName}?") },
+            title = { Text(stringResource(R.string.add_friend_title)) },
+            text = {
+                Text(stringResource(R.string.send_request_message, entry.userName))
+            },
             confirmButton = {
                 Button(onClick = {
                     viewModel.sendFriendRequest(entry.uid)
                     userToConfirm = null
-                }) { Text("Send") }
+                }) { Text(stringResource(R.string.send)) }
             },
             dismissButton = {
-                TextButton(onClick = { userToConfirm = null }) { Text("Cancel") }
+                TextButton(onClick = { userToConfirm = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         )
     }
@@ -321,7 +350,8 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { subjectPickerExpanded = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { subjectPickerExpanded = false })
+            { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -338,6 +368,8 @@ private fun RankingRow(
     isRequestPending: Boolean,
     onAddFriend: () -> Unit
 ) {
+    val unit = category.unitRes()?.let { stringResource(it) }
+
     val rowColor = when (rank) {
         1 -> Color(0xFFFFD700).copy(alpha = 0.15f)
         2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f)
@@ -375,53 +407,77 @@ private fun RankingRow(
                     Spacer(modifier = Modifier.width(6.dp))
                     val streakColor = if (entry.currentStreak > 0) Color(0xFFFF9800) else Color.LightGray
                     Text(
-                        text = "🔥${entry.currentStreak}",
+                        text = stringResource(R.string.streak, entry.currentStreak),
                         fontWeight = FontWeight.Bold,
                         color = streakColor,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                Text(category.label, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(category.labelRes()), style = MaterialTheme.typography.bodySmall)
             }
 
+            // Functionality: Add non-friend member to friend list
             if (!isCurrentUser) {
                 if (!isAlreadyFriend && !isRequestPending) {
                     IconButton(onClick = onAddFriend) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.PersonAdd, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary)
                     }
                 } else if (isRequestPending) {
                     IconButton(onClick = {}, enabled = false) {
-                        Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = Color.Gray)
+                        Icon(Icons.Default.HourglassEmpty, contentDescription = null,
+                            tint = Color.Gray)
                     }
                 }
             }
 
             val realityGapValue = entry.avgAccuracy
             val displayValue = when (category) {
-                RankingCategory.HARD_WORK -> formatMsWithSeconds(entry.totalStudyTimeMs)
+
+                RankingCategory.HARD_WORK ->
+                    formatMsWithSeconds(entry.totalStudyTimeMs)
+
                 RankingCategory.REALITY_GAP -> {
                     val sign = if (realityGapValue > 0) "+" else ""
-                    val displayGap = if (isAllExams) realityGapValue else realityGapValue * (maxGrade / 10.0)
-                    "$sign${"%.1f".format(displayGap)} ${category.unit}"
+                    val displayGap =
+                        if (isAllExams) realityGapValue
+                        else realityGapValue * (maxGrade / 10.0)
+
+                    "$sign${"%.1f".format(displayGap)} ${unit ?: ""}"
                 }
-                RankingCategory.STUDY_EFFICIENCY -> "${"%.2f".format(entry.efficiencyScore)} ${category.unit}"
+
+                RankingCategory.STUDY_EFFICIENCY ->
+                    "${"%.2f".format(entry.efficiencyScore)} ${unit ?: ""}"
+
                 RankingCategory.GRADE_ACTUAL -> {
-                    if (isAllExams) "${"%.1f".format(entry.avgActualGrade)} pts"
-                    else "${"%.1f".format(entry.avgActualGrade * (maxGrade / 10.0))}/$maxGrade"
+                    if (isAllExams) {
+                        val pts = stringResource(R.string.unit_pts)
+                        "${"%.1f".format(entry.avgActualGrade)} $pts"
+                    } else {
+                        "${"%.1f".format(entry.avgActualGrade * (maxGrade / 10.0))}/$maxGrade"
+                    }
                 }
+
                 RankingCategory.GRADE_EXPECTED -> {
-                    if (isAllExams) "${"%.1f".format(entry.avgExpectedGrade)} pts"
-                    else "${"%.1f".format(entry.avgExpectedGrade * (maxGrade / 10.0))}/$maxGrade"
+                    if (isAllExams) {
+                        val pts = stringResource(R.string.unit_pts)
+                        "${"%.1f".format(entry.avgExpectedGrade)} $pts"
+                    } else {
+                        "${"%.1f".format(entry.avgExpectedGrade * (maxGrade / 10.0))}/$maxGrade"
+                    }
                 }
-                RankingCategory.SLEEP -> "${"%.1f".format(entry.avgSleep)} ${category.unit}"
+
+                RankingCategory.SLEEP ->
+                    "${"%.1f".format(entry.avgSleep)} ${unit ?: ""}"
+
                 else -> {
-                    val count = when(category) {
+                    val count = when (category) {
                         RankingCategory.HABIT_WATER -> entry.totalWater
                         RankingCategory.HABIT_COFFEE -> entry.totalCoffee
                         RankingCategory.HABIT_ENERGY -> entry.totalEnergy
                         else -> entry.totalBathroom
                     }
-                    "$count ${category.unit}"
+                    "$count ${unit ?: ""}"
                 }
             }
 

@@ -1,3 +1,61 @@
 <resources>
     <string name="app_name">PearPressure</string>
+
+    <!-- General Action Buttons -->
+    <string name="send">Send</string>
+    <string name="change">Change</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="leave">Leave</string>
+
+    <!-- Subjects -->
+    <string name="subjects">Subjects</string>
+    <string name="add_subject">Add Subject</string>
+    <string name="edit_subject">Edit Subject</string>
+    <string name="delete_subject">Delete Subject</string>
+    <string name="leave_subject">Leave Subject</string>
+    <string name="owner_view_exams">Owner • Tap to view exams</string>
+    <string name="member_view_exams">Member • Tap to view exams</string>
+    <string name="no_subjects">No subjects yet!</string>
+    <string name="click_add_subject">Click \'Add Subject\' to add your first one.</string>
+    <string name="name">Name</string>
+    <string name="dialog_delete_subject">Are you sure you want to delete \'%1$s\'? This action will permanently remove the subject and all associated exams.</string>
+    <string name="dialog_leave_subject">Are you sure you want to leave \'%1$s\'? You will no longer have access to this subject\'s data.</string>
+
+    <!-- Rankings -->
+    <string name="subject">Subject</string>
+    <string name="select_subject">Select Subject</string>
+    <string name="exam">Exam</string>
+    <string name="all_exams">All Exams</string>
+    <string name="all_exams_total">All Exams (Total)</string>
+    <string name="metric">Metric</string>
+    <string name="streak">🔥%1$d</string>
+
+    <!-- Friend Dialog -->
+    <string name="add_friend_title">Add Friend</string>
+    <string name="send_request_message">Do you want to send a friend request to %1$s?</string>
+
+    <!-- Ranking Categories -->
+    <string name="cat_hard_work">Hard Work (Time)</string>
+    <string name="cat_reality_gap">Your Guess</string>
+    <string name="cat_study_efficiency">Study Efficiency</string>
+    <string name="cat_water">Water Intake</string>
+    <string name="cat_coffee">Coffee Consumed</string>
+    <string name="cat_energy">Energy Drinks</string>
+    <string name="cat_bathroom">Bathroom Breaks</string>
+    <string name="cat_grade_actual">Final Grade</string>
+    <string name="cat_grade_expected">Expected Grade</string>
+    <string name="cat_sleep">Sleep</string>
+    <string name="cat_no_data">No data available for this selection</string>
+
+    <!-- Units -->
+    <string name="unit_pts">pts</string>
+    <string name="unit_pts_hr">pts/hr</string>
+    <string name="unit_glasses">glasses</string>
+    <string name="unit_cups">cups</string>
+    <string name="unit_cans">cans</string>
+    <string name="unit_breaks">breaks</string>
+    <string name="unit_hours">hrs</string>
+
 </resources>

@@ -12,9 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.pearpressure.R
 import com.example.pearpressure.data.Subject
+import androidx.annotation.StringRes
 
 @Composable
 fun SubjectsScreen(
@@ -43,7 +46,7 @@ fun SubjectsScreen(
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Subjects",
+                text = stringResource(R.string.subjects),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold
             )
@@ -53,16 +56,16 @@ fun SubjectsScreen(
                 newName = ""
                 showDialog = true
             }) {
-                Text("Add Subject")
+                Text(text = stringResource(R.string.add_subject))
             }
         }
 
         if (subjects.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text("No subjects yet!", fontWeight = FontWeight.SemiBold)
+                    Text(text = stringResource(R.string.no_subjects), fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(4.dp))
-                    Text("Click 'Add Subject' to add your first one.")
+                    Text(text = stringResource(R.string.click_add_subject))
                 }
             }
         } else {
@@ -88,7 +91,8 @@ fun SubjectsScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = s.name, style = MaterialTheme.typography.titleLarge)
                                 Text(
-                                    text = if (isOwner) "Owner • Tap to view exams" else "Member • Tap to view exams",
+                                    text = if (isOwner) stringResource(R.string.owner_view_exams)
+                                    else stringResource(R.string.member_view_exams),
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -115,7 +119,7 @@ fun SubjectsScreen(
                                             Icons.Default.Delete
                                         else
                                             Icons.AutoMirrored.Filled.ExitToApp,
-                                        contentDescription = if (isOwner) "Delete" else "Leave",
+                                        contentDescription = if (isOwner) stringResource(R.string.delete) else stringResource(R.string.leave),
                                         tint = if (isOwner)
                                             MaterialTheme.colorScheme.error
                                         else
@@ -134,13 +138,13 @@ fun SubjectsScreen(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(if (subjectToEdit == null) "New subject" else "Edit subject") },
+            title = { Text(if (subjectToEdit == null) stringResource(R.string.add_subject) else stringResource(R.string.edit_subject)) },
             text = {
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
                     singleLine = true,
-                    label = { Text("Name") }
+                    label = { Text(text=stringResource(R.string.name)) }
                 )
             },
             confirmButton = {
@@ -155,10 +159,10 @@ fun SubjectsScreen(
                         showDialog = false
                     },
                     enabled = newName.trim().isNotEmpty()
-                ) { Text("Save") }
+                ) { Text(text = stringResource(R.string.save)) }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDialog = false }) { Text("Cancel") }
+                OutlinedButton(onClick = { showDialog = false }) { Text(text = stringResource(R.string.cancel)) }
             }
         )
     }
@@ -166,18 +170,18 @@ fun SubjectsScreen(
     // Dialog to confirm leaving or deleting a subject
     subjectToAction?.let { subject ->
         val isOwner = subject.ownerId == currentUserId
+        val message = if (isOwner) {
+            stringResource(R.string.dialog_delete_subject, subject.name)
+        } else {
+            stringResource(R.string.dialog_leave_subject, subject.name)
+        }
         AlertDialog(
             onDismissRequest = { subjectToAction = null },
             title = {
-                Text(text = if (isOwner) "Delete Subject" else "Leave Subject")
+                Text(text = if (isOwner) stringResource(R.string.delete_subject) else stringResource(R.string.leave_subject))
             },
             text = {
-                Text(
-                    text = if (isOwner)
-                        "Are you sure you want to delete '${subject.name}'? This action will permanently remove the subject and all associated exams."
-                    else
-                        "Are you sure you want to leave '${subject.name}'? You will no longer have access to this subject's data."
-                )
+                Text(text = message)
             },
             confirmButton = {
                 Button(
@@ -189,12 +193,12 @@ fun SubjectsScreen(
                         containerColor = if (isOwner) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text(text = if (isOwner) "Delete" else "Leave")
+                    Text(text = if (isOwner) stringResource(R.string.delete) else stringResource(R.string.leave))
                 }
             },
             dismissButton = {
                 OutlinedButton(onClick = { subjectToAction = null }) {
-                    Text("Cancel")
+                    Text(text = stringResource(R.string.cancel))
                 }
             }
         )

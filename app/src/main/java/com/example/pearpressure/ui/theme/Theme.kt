@@ -33,7 +33,8 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 /**
- * Theme.kt: une color palette + typography + shapes y lo aplica a toda la app.:contentReference[oaicite:7]{index=7}
+ * Theme.kt: puts together Color, Shapes and Type
+ * contentReference[oaicite:7]{index=7}
  */
 @Composable
 fun SofiaTestTheme(
@@ -41,7 +42,8 @@ fun SofiaTestTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Material Design 3 puede usar “dynamic color” (opcional).:contentReference[oaicite:8]{index=8}
+    // Material Design 3 can use “dynamic color”
+    // contentReference[oaicite:8]{index=8}
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
