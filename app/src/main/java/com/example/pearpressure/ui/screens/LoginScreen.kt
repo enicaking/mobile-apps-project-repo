@@ -7,6 +7,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.pearpressure.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun LoginScreen(
@@ -24,22 +26,26 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = if (isRegistering) "Create account" else "Welcome back",
-            style = MaterialTheme.typography.headlineMedium)
+
+        Text(
+            text = if (isRegistering) stringResource(R.string.login_title_create_account)
+            else stringResource(R.string.login_title_welcome_back),
+            style = MaterialTheme.typography.headlineMedium
+        )
 
         Spacer(Modifier.height(16.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.login_label_email)) },
             modifier = Modifier.fillMaxWidth()
         )
 
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.login_label_password)) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -61,11 +67,17 @@ fun LoginScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (isRegistering) "Sign Up" else "Login")
+            Text(
+                if (isRegistering) stringResource(R.string.login_button_sign_up)
+                else stringResource(R.string.login_button_login)
+            )
         }
 
         TextButton(onClick = { isRegistering = !isRegistering }) {
-            Text(if (isRegistering) "Already have an account? Login" else "New here? Create account")
+            Text(
+                if (isRegistering) stringResource(R.string.login_toggle_have_account)
+                else stringResource(R.string.login_toggle_new_here)
+            )
         }
     }
 }
