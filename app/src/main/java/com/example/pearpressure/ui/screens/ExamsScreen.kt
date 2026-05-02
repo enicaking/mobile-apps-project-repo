@@ -2,7 +2,6 @@ package com.example.pearpressure.ui.screens
 
 import com.example.pearpressure.data.UserProfile
 import com.example.pearpressure.data.Exam
-
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.clickable
@@ -30,6 +29,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.pearpressure.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ExamsScreen(
@@ -81,7 +82,7 @@ fun ExamsScreen(
     var sleepInput by remember { mutableStateOf("") }
     var actualInput by remember { mutableStateOf("") }
 
-    // Internal state to toggle between "View/Success" and "Edit" mode when finished
+    // Internal state to toggle between "View/Success" and stringResource(R.string.edit) mode when finished
     var isEditingFinishedExam by remember { mutableStateOf(false) }
 
     var examToDelete by remember { mutableStateOf<Exam?>(null) }
@@ -102,7 +103,7 @@ fun ExamsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Text(
                 text = subjectName,
@@ -118,7 +119,7 @@ fun ExamsScreen(
                         onAddMember()
                     }
                 ) {
-                    Text("Add Member")
+                    Text(stringResource(R.string.exams_button_add_member))
                 }
             }
         }
@@ -135,13 +136,13 @@ fun ExamsScreen(
                 .fillMaxWidth()
                 .padding(bottom = 12.dp)
         ) {
-            Text("Add Exam")
+            Text(stringResource(R.string.exams_button_add_exam))
         }
 
         if (exams.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No exams found.\nTap 'Add Exam' to create one.",
+                    text = stringResource(R.string.exams_empty_hint),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -183,14 +184,14 @@ fun ExamsScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text(if (examToEdit == null) "New Exam" else "Edit Exam") },
+            title = { Text(if (examToEdit == null) stringResource(R.string.exams_dialog_new_title) else stringResource(R.string.exams_dialog_edit_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = newTitle,
                         onValueChange = { newTitle = it },
                         singleLine = true,
-                        label = { Text("Exam Title") },
+                        label = { Text(stringResource(R.string.exams_dialog_label_exam_title)) },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -198,7 +199,7 @@ fun ExamsScreen(
                     OutlinedTextField(
                         value = maxGradeInput,
                         onValueChange = { maxGradeInput = it },
-                        label = { Text("Max Grade (Scale)") },
+                        label = { Text(stringResource(R.string.exams_dialog_label_max_grade)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -207,9 +208,9 @@ fun ExamsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val dateText = selectedEndsAtMs?.let { formatDateTime(it) } ?: "Not set"
+                        val dateText = selectedEndsAtMs?.let { formatDateTime(it) } ?: stringResource(R.string.exams_dialog_ends_at_not_set)
                         Text(
-                            text = "Ends at: $dateText",
+                            text = stringResource(R.string.exams_dialog_ends_at, dateText),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -241,7 +242,7 @@ fun ExamsScreen(
                                     currentCal.get(Calendar.DAY_OF_MONTH)
                                 ).show()
                             }
-                        ) { Text("Set Date") }
+                        ) { Text(stringResource(R.string.exams_dialog_button_set_date)) }
                     }
                 }
             },
@@ -258,10 +259,10 @@ fun ExamsScreen(
                         showCreateDialog = false
                     },
                     enabled = newTitle.trim().isNotEmpty() && selectedEndsAtMs != null
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -270,25 +271,25 @@ fun ExamsScreen(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Add Friend to Subject") },
+            title = { Text(stringResource(R.string.exams_dialog_add_friend_title)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it; onSearchFriends(it) },
-                        label = { Text("Search friends") }
+                        label = { Text(stringResource(R.string.exams_dialog_search_friends_label)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     friends.forEach { user ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(user.fullName)
-                            TextButton(onClick = { onUserSelected(user); showDialog = false; query = "" }) { Text("Add") }
+                            TextButton(onClick = { onUserSelected(user); showDialog = false; query = "" }) { Text(stringResource(R.string.add)) }
                         }
                     }
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
@@ -303,9 +304,9 @@ fun ExamsScreen(
             title = {
                 Text(
                     when {
-                        !hasExpected || !hasSleep -> "Post-Exam Info"
-                        !hasReal -> "Final Result"
-                        isEditingFinishedExam -> "Edit ${exam.title}"
+                        !hasExpected || !hasSleep -> stringResource(R.string.exams_results_title_post_exam)
+                        !hasReal                  -> stringResource(R.string.exams_results_title_final)
+                        isEditingFinishedExam     -> stringResource(R.string.exams_results_title_edit, exam.title)
                         else -> exam.title
                     }
                 )
@@ -316,20 +317,20 @@ fun ExamsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Exam Scale: /${exam.maxGrade}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.exams_results_exam_scale, exam.maxGrade), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 
                     when {
                         // PHASE 1: Post-Exam (Expected + Sleep)
                         !hasExpected || !hasSleep -> {
                             Text("Please use numeric format (e.g., 8.5 or 7)", style = MaterialTheme.typography.bodySmall)
-                            OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text(stringResource(R.string.exams_results_label_expected_grade)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text(stringResource(R.string.exams_results_label_sleep_hours)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                         }
 
                         // PHASE 2: Just Real Grade
                         !hasReal -> {
-                            Text("Stats saved! Now, enter your Final grade:", style = MaterialTheme.typography.bodySmall)
-                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Final Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            Text(stringResource(R.string.exams_results_stats_saved), style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text(stringResource(R.string.exams_results_label_final_grade)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                         }
 
                         // PHASE 3: View Mode (Finished) - Visual summary
@@ -356,21 +357,21 @@ fun ExamsScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Expected", style = MaterialTheme.typography.labelSmall)
+                                    Text(stringResource(R.string.exams_results_label_expected), style = MaterialTheme.typography.labelSmall)
                                     Text("$expectedInput", fontWeight = FontWeight.Bold)
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Sleep", style = MaterialTheme.typography.labelSmall)
-                                    Text("${sleepInput}h", fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.exams_results_label_sleep), style = MaterialTheme.typography.labelSmall)
+                                    Text(stringResource(R.string.exams_results_sleep_value, sleepInput), fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
 
                         // PHASE 4: Edit Mode (Finished)
                         else -> {
-                            OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text("Expected Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text("Sleep Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text("Final Grade") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = expectedInput, onValueChange = { expectedInput = it }, label = { Text(stringResource(R.string.exams_results_label_expected_grade)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = sleepInput, onValueChange = { sleepInput = it }, label = { Text(stringResource(R.string.exams_results_label_sleep_hours)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = actualInput, onValueChange = { actualInput = it }, label = { Text(stringResource(R.string.exams_results_label_final_grade)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }
@@ -379,17 +380,17 @@ fun ExamsScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     if (hasReal && !isEditingFinishedExam) {
                         TextButton(onClick = { isEditingFinishedExam = true }) {
-                            Text("Edit Stats")
+                            Text(stringResource(R.string.exams_results_button_edit_stats))
                         }
                         Button(onClick = { examForResults = null }) {
-                            Text("Got it!")
+                            Text(stringResource(R.string.exams_results_button_got_it))
                         }
                     } else {
                         // Cancel button for balance and navigation
                         TextButton(onClick = {
                             if (isEditingFinishedExam) isEditingFinishedExam = false else examForResults = null
                         }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
 
                         Button(
@@ -403,7 +404,7 @@ fun ExamsScreen(
                                 if (isEditingFinishedExam) isEditingFinishedExam = false else examForResults = null
                             }
                         ) {
-                            Text(if (isEditingFinishedExam) "Update" else "Save Information")
+                            Text(if (isEditingFinishedExam) stringResource(R.string.update) else stringResource(R.string.exams_results_button_save))
                         }
                     }
                 }
@@ -415,15 +416,15 @@ fun ExamsScreen(
         val exam = examToDelete!!
         AlertDialog(
             onDismissRequest = { examToDelete = null },
-            title = { Text("Delete Exam") },
-            text = { Text("Are you sure you want to delete '${exam.title}'? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.exams_dialog_delete_title)) },
+            text = { Text(stringResource(R.string.exams_dialog_delete_text, exam.title)) },
             confirmButton = {
                 Button(
                     onClick = { onDeleteExam(exam.id); examToDelete = null },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { OutlinedButton(onClick = { examToDelete = null }) { Text("Cancel") } }
+            dismissButton = { OutlinedButton(onClick = { examToDelete = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -475,12 +476,12 @@ private fun ExamCard(
 
                 if (isOwner) {
                     IconButton(onClick = onEdit) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.edit), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
 
                 IconButton(onClick = onDelete) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
