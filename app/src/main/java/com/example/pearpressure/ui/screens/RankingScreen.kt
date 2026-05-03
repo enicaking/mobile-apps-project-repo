@@ -22,7 +22,7 @@ import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
 import com.example.pearpressure.ui.theme.*
 
-// 2. Ranking Types (Dropdown)
+// Dropdown menus that filter the ranking lists
 
 @StringRes
 fun RankingCategory.labelRes(): Int = when (this) {
@@ -178,7 +178,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            // 2. Time Scope Segmented Toggle
+            // Time Scope Segmented Toggle
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 RankingScope.entries.forEachIndexed { index, scope ->
                     SegmentedButton(
@@ -191,12 +191,12 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            // 3. Dual Dropdowns Row
+            // Dual Dropdown
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // EXAM FILTER DROPDOWN
+                // Exam filter Dropdown
                 ExposedDropdownMenuBox(
                     expanded = examExpanded,
                     onExpandedChange = { examExpanded = !examExpanded },
@@ -230,7 +230,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
                     }
                 }
 
-                // CATEGORY/METRIC DROPDOWN
+                // Category or metric dropdown menu
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = !categoryExpanded },
@@ -263,7 +263,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            // 4. Ranking List
+            // Ranking List
             val sortedEntries = remember(entries, selectedCategory) {
                 when (selectedCategory) {
                     RankingCategory.HARD_WORK -> entries.sortedByDescending { it.totalStudyTimeMs }
@@ -309,7 +309,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    // --- FRIEND REQUEST CONFIRMATION DIALOG ---
+    // Dialog for Friend Requests within Ranking page
     userToConfirm?.let { entry ->
         AlertDialog(
             onDismissRequest = { userToConfirm = null },
@@ -331,7 +331,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         )
     }
 
-    // --- SUBJECT PICKER DIALOG ---
+    // Dialog Subject Picker
     if (subjectPickerExpanded) {
         AlertDialog(
             onDismissRequest = { subjectPickerExpanded = false },
