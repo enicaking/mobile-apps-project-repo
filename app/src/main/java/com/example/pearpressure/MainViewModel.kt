@@ -213,7 +213,6 @@ class MainViewModel : ViewModel() {
     }
 
     // Auth
-
     fun signIn(email: String, pass: String, onSuccess: () -> Unit) = viewModelScope.launch {
         authRepo.signIn(email, pass)
             .onSuccess { user ->
@@ -268,7 +267,6 @@ class MainViewModel : ViewModel() {
     }
 
     // Exams / Subjects
-
     fun loadExams(subjectId: String) {
         examsListener?.remove()
         examsListener = repo.listenToExams(subjectId) { _exams.value = it }
@@ -357,7 +355,6 @@ class MainViewModel : ViewModel() {
     }
 
     // Ranking
-
     fun selectRankingSubject(subjectId: String) {
         _selectedRankingSubjectId.value = subjectId
         loadExams(subjectId)
@@ -365,7 +362,6 @@ class MainViewModel : ViewModel() {
     }
 
     // Study buddies
-
     private fun refreshStudyBuddiesFromSubjects() = viewModelScope.launch {
         val currentUid = authRepo.currentUser?.uid ?: return@launch
 
@@ -381,7 +377,6 @@ class MainViewModel : ViewModel() {
     }
 
     // Friends actions
-
     fun searchUserByEmail(email: String) = viewModelScope.launch {
         _friendSearchError.value = null
         _friendSearchResult.value = null
@@ -422,7 +417,6 @@ class MainViewModel : ViewModel() {
     }
 
     // Profile
-
     fun loadCurrentUserProfile() {
         val uid = authRepo.currentUser?.uid ?: return
 
@@ -433,30 +427,29 @@ class MainViewModel : ViewModel() {
                         val now = System.currentTimeMillis()
                         val lastDate = profile.lastStudyDateMs
 
-                        // Si la racha está "rota" (ha pasado más de un día natural y no es hoy)
-                        // podemos calcular si visualmente debería ser 0
+                        // If the streak is broken, calculating visually if it should be 0(for how its seen in the profile)
                         val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
                         val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDate }
 
-                        // Añadimos un día al último estudio
+                        // We add a day to the last study
                         calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
 
                         val isToday = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
                                 calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
 
-                        // Si no es hoy, y tampoco fue ayer (porque ya sumamos 1), la racha es 0
+                        // If its not today and yesterday either(as we already sum 1), STREAK IS 0
                         val displayStreak = if (lastDate == 0L) 0
                         else if (isSameDay(now, lastDate) || isNextDay(now, lastDate)) profile.currentStreak
                         else 0
 
-                        // Actualizamos el StateFlow con el perfil, pero con la racha corregida para la vista
+                        //Updating the StateFlow with the profile, with the streak seen correctly
                         _currentUserProfile.value = profile.copy(currentStreak = displayStreak)
                     }
                 }
         }
     }
 
-    // Helpers para no repetir código de calendario
+    // Helpers to not repeat the code of calendar
     private fun isSameDay(t1: Long, t2: Long): Boolean {
         val cal1 = java.util.Calendar.getInstance().apply { timeInMillis = t1 }
         val cal2 = java.util.Calendar.getInstance().apply { timeInMillis = t2 }
@@ -469,13 +462,6 @@ class MainViewModel : ViewModel() {
         calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
         return isSameDay(now, calLast.timeInMillis)
     }
-
-    fun getCurrentUserName(): String =
-        currentUserProfile.value?.username ?: "No username"
-
-    fun getCurrentUserTime(): Long =
-        currentUserProfile.value?.totalStudyTime ?: 0L
-
     override fun onCleared() {
         subjectsListeners.forEach { it.remove() }
         examsListener?.remove()
@@ -553,8 +539,6 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
-    fun shouldCompleteProfile(): Boolean = _needsProfileCompletion.value
-
     fun searchFriends(query: String) {
         val currentFriends = _friends.value
 
@@ -573,10 +557,10 @@ class MainViewModel : ViewModel() {
         val userId = authRepo.currentUser?.uid ?: return@launch
         repo.updateExamStats(examId, userId, expected, sleep, actual)
             .onSuccess {
-                // Sofia: Trigger notification when actual grade is submitted
+                // Trigger notification when actual grade is submitted
                 if (actual != null) {
                     val subjectId = _selectedRankingSubjectId.value ?: ""
-                    // Sofia should implement the actual broadcast logic in her service
+                    // implement the actual broadcast logic in the service
                     android.util.Log.d("PEAR_NOTIF", "Sofia: Broadcast to $subjectId that user $userId posted a grade")
                 }
                 loadCurrentUserProfile()
@@ -594,9 +578,9 @@ class MainViewModel : ViewModel() {
         bathroom: Int = 0
     ) = viewModelScope.launch {
         val userId = authRepo.currentUser?.uid ?: return@launch
-        val profile = _currentUserProfile.value ?: return@launch // Necesitamos el perfil actual
+        val profile = _currentUserProfile.value ?: return@launch // We need the current profile
 
-        // 1. Calcular nueva racha
+        // 1. Calculating new streak
         val newStreak = calculateNewStreak(profile.currentStreak, profile.lastStudyDateMs)
 
         val session = Session(
@@ -610,14 +594,14 @@ class MainViewModel : ViewModel() {
             bathroomBreaks = bathroom
         )
 
-        // 2. Guardar sesión y actualizar perfil (Racha + Tiempo total)
+        // 2. Saving session and updating profile(Streak and total time)
         repo.addSession(session).onFailure { _error.value = it.message }
 
-        // mEtodo en el repo que actualice racha y fecha
+        // method to upload streak and date
         repo.updateUserStreakAndStats(userId, durationMs, newStreak, System.currentTimeMillis())
             .onSuccess {
-                // RECARGA AUTOMÁTICA TRAS ESTUDIAR
-                loadCurrentUserProfile() // Recargar para ver el fueguito en la UI
+                // RELOADS AUTOMATICALLY AFTER STUDYING
+                loadCurrentUserProfile() // Reload to see the fire in the UI
                 loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
             }
             .onFailure { _error.value = it.message }
@@ -643,23 +627,21 @@ class MainViewModel : ViewModel() {
         examId: String? = null,
         scope: RankingScope = RankingScope.TOTAL
     ) = viewModelScope.launch {
-        // 1. FORZAMOS que las asignaturas estén cargadas.
-        // Si la lista está vacía, intentamos cargar perfiles/subjects primero
+        // 1. We FORCE the subjects to be loaded
+        //If ist is empty, try to load profiles/subjects first
         if (_subjects.value.isEmpty()) {
-            // Aquí deberías tener una llamada a la función que inicializa tus subjects
-            // o esperar un poco a que el listener de Firebase responda.
         }
 
         val selectedId = _selectedRankingSubjectId.value
 
-        // 2. Cogemos TODAS las asignaturas donde el usuario es dueño o miembro
+        // 2. We choose ALL subjects(user is either owner or member of it)
         val subjectsToProcess = if (selectedId != null) {
             _subjects.value.filter { it.id == selectedId }
         } else {
             _subjects.value
         }
 
-        // Si sigue vacío después de intentar cargar, no podemos seguir
+        // If its still empty after trying to load, we cannot continue
         if (subjectsToProcess.isEmpty()) return@launch
 
         val allExams = mutableListOf<Exam>()
@@ -698,7 +680,7 @@ class MainViewModel : ViewModel() {
                         return ((value ?: 0.0) / actualMax) * 10.0
                     }
 
-                    // SUMA DE DIFERENCIAS de notas
+                    // Sum the difference between grades(your grade/reality gap)
                     var totalGap = 0.0
                     relevantExams.forEach { exam ->
                         val actual = exam.actualGrades[userId]
@@ -707,11 +689,11 @@ class MainViewModel : ViewModel() {
                         if (actual != null && expected != null) {
                             val nActual = normalize(actual, exam.maxGrade)
                             val nExpected = normalize(expected, exam.maxGrade)
-                            totalGap += (nActual - nExpected) // SUMA pura y dura
+                            totalGap += (nActual - nExpected) // just a SUM
                         }
                     }
 
-                    // Mantengo los cálculos de promedios para el resto de la app
+                    // Mantained the averages for the rest of the app
                     val examsWithActual = relevantExams.filter { it.actualGrades.containsKey(userId) }
                     val avgActual = if (examsWithActual.isNotEmpty()) {
                         examsWithActual.map { normalize(it.actualGrades[userId], it.maxGrade) }.average()
@@ -731,12 +713,12 @@ class MainViewModel : ViewModel() {
                     val totalHours = totalMs / 3600000.0
                     val efficiency = if (totalHours > 0.0027) avgActual / totalHours else 0.0
 
-                    RankingEntryUi(
+                    RankingEntryUi( // logic explained in report
                         uid = userId,
                         userName = profile.username.ifBlank { profile.fullName.ifBlank { profile.email } },
                         totalStudyTimeMs = totalMs,
                         currentStreak = profile.currentStreak,
-                        avgAccuracy = totalGap, // Aquí metemos la SUMA
+                        avgAccuracy = totalGap, // Sum of the  your guesses for all exams
                         efficiencyScore = efficiency,
                         totalWater = water,
                         totalCoffee = coffee,
@@ -815,27 +797,27 @@ class MainViewModel : ViewModel() {
 
     //CALCULATE STREAK FUNCTION
     private fun calculateNewStreak(currentStreak: Int, lastDateMs: Long): Int {
-        if (lastDateMs == 0L) return 1 // Primera vez que estudia
+        if (lastDateMs == 0L) return 1 // First time that you study in day
 
         val now = System.currentTimeMillis()
         val dayMs = 24 * 60 * 60 * 1000L
 
-        // Usamos calendarios para comparar días naturales (no solo 24h exactas)
+        // We use Calendar to compare a natural day (not just exactly 24 hours)
         val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
         val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDateMs }
 
         val isSameDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
                 calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
 
-        // Es el día siguiente si la diferencia es de 1 día
+        // Its the next day if the difference of the calendar is 1 day
         calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
         val isNextDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
                 calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
 
         return when {
-            isSameDay -> currentStreak // Ya cumplió hoy, mantenemos racha
-            isNextDay -> currentStreak + 1 // ¡Aumenta la racha!
-            else -> 1 // Han pasado más de 48h, racha rota. Volvemos a 1.
+            isSameDay -> currentStreak // Already studied today so keep streak
+            isNextDay -> currentStreak + 1 // Streak +1 day
+            else -> 1 // More than 48h passed, streak lost. go back to 1
         }
     }
 
