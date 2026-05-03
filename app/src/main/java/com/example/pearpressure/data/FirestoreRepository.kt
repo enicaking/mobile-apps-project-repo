@@ -104,7 +104,7 @@ class FirestoreRepository {
 
     // ── REAL-TIME LISTENERS ───────────────────────────────
 
-    // Cambia la función de escuchar asignaturas
+    // Subject listener
     fun listenToSubjects(userId: String, onChange: (List<Subject>) -> Unit): ListenerRegistration {
         return db.collection("subjects")
             .whereEqualTo("ownerId", userId) //Only the owner
@@ -148,7 +148,8 @@ class FirestoreRepository {
 
 
     // ── SUBJECTS (owner OR member) ──────────────────────────
-    // Devuelve 2 listeners (owned + member). El ViewModel los guardará y los cerrará.
+    // Separate listener for owners and members
+    // ViewModel saves state and closes
     fun listenToSubjectsForUser(
         userId: String,
         onChange: (List<Subject>) -> Unit
@@ -374,7 +375,6 @@ class FirestoreRepository {
             }
     }
 
-    // --- ADD FRIENDS TO SUBJECT
     // ── STATS & RANKING UPDATES  ──────────────────
 
     suspend fun updateExamStats(
@@ -402,7 +402,7 @@ class FirestoreRepository {
             .await()
     }
 
-    //being able to edit subjects and exams::
+    // Edit subjects and exams
     suspend fun updateSubjectName(subjectId: String, newName: String): Result<Unit> {
         return try {
             db.collection("subjects").document(subjectId)
@@ -428,7 +428,7 @@ class FirestoreRepository {
         }
     }
 
-    // ── RANKING FETCHERS (PHASE 3) ───────────────────────
+    // ── RANKING ──────────────────────────────────
 
     // Gets all exams for a specific subject (for Accuracy/Efficiency rankings)
     suspend fun getExamsBySubjectSync(subjectId: String): List<Exam> = try {
@@ -463,9 +463,8 @@ class FirestoreRepository {
     }
 
 
-
     // STREAKS & STATS UPDATES
-    //Actualiza el tiempo total, la racha actual y la fecha del último estudio en una sola operación.
+    // Update total time, streak and last session date
     suspend fun updateUserStreakAndStats(
         userId: String,
         addedMs: Long,
@@ -481,7 +480,7 @@ class FirestoreRepository {
         docRef.update(updates).await()
     }
 
-    //Resetea la racha a cero. Útil cuando detectamos que han pasado más de 48h.
+    // Resets streak to 0 once 48 hours have passed.
     suspend fun resetUserStreak(userId: String): Result<Unit> = runCatching {
         db.collection("users").document(userId)
             .update("currentStreak", 0)
