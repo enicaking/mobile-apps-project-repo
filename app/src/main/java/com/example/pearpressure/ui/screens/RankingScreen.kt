@@ -22,7 +22,7 @@ import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
 import com.example.pearpressure.ui.theme.*
 
-// 2. Ranking Types (Dropdown)
+//  Ranking Types (Dropdown)
 
 @StringRes
 fun RankingCategory.labelRes(): Int = when (this) {
@@ -67,7 +67,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
     val selectedSubjectId by viewModel.selectedRankingSubjectId.collectAsState()
     val entries by viewModel.rankingEntries.collectAsState()
 
-    // NEW: Collect friend and request states
+    // Collect friend and request states
     val friends by viewModel.friends.collectAsState()
     val outgoingRequests by viewModel.outgoingRequests.collectAsState()
     val currentUserId = viewModel.getCurrentUserId()
@@ -101,7 +101,6 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
 
     // Find selected exam to know the max scale for display
     val currentSelectedExam = exams.find { it.id == selectedExamId }
-
     val hasMyExpectedGrade = currentSelectedExam?.expectedGrades?.containsKey(currentUserId) == true
     val hasMyFinalGrade = currentSelectedExam?.actualGrades?.containsKey(currentUserId) == true
     val hasMySleepHours = currentSelectedExam?.sleepHours?.containsKey(currentUserId) == true
@@ -115,19 +114,15 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
             RankingCategory.HABIT_COFFEE,
             RankingCategory.HABIT_ENERGY,
             RankingCategory.HABIT_BATHROOM -> true
-
             RankingCategory.REALITY_GAP ->
                 if (selectedExamId != null) hasMyExpectedGrade && hasMyFinalGrade
                 else entries.any { it.uid == currentUserId && it.avgAccuracy != 0.0 }
-
             RankingCategory.GRADE_EXPECTED ->
                 if (selectedExamId != null) hasMyExpectedGrade
                 else entries.any { it.uid == currentUserId && it.avgExpectedGrade > 0 }
-
             RankingCategory.GRADE_ACTUAL ->
                 if (selectedExamId != null) hasMyFinalGrade
                 else entries.any { it.uid == currentUserId && it.avgActualGrade > 0 }
-
             RankingCategory.SLEEP ->
                 if (selectedExamId != null) hasMySleepHours
                 else entries.any { it.uid == currentUserId && it.avgSleep > 0 }
@@ -309,7 +304,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    // --- FRIEND REQUEST CONFIRMATION DIALOG ---
+    // FRIEND REQUEST CONFIRMATION DIALOG
     userToConfirm?.let { entry ->
         AlertDialog(
             onDismissRequest = { userToConfirm = null },
@@ -331,7 +326,7 @@ fun RankingScreen(viewModel: MainViewModel = viewModel()) {
         )
     }
 
-    // --- SUBJECT PICKER DIALOG ---
+    // SUBJECT PICKER DIALOG
     if (subjectPickerExpanded) {
         AlertDialog(
             onDismissRequest = { subjectPickerExpanded = false },

@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pearpressure.MainViewModel
 import com.example.pearpressure.data.UserProfile
-import com.example.pearpressure.IncomingFriendRequestUi
 import com.example.pearpressure.OutgoingFriendRequestUi
 import com.example.pearpressure.R
 import androidx.compose.ui.res.stringResource
@@ -79,7 +78,6 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                     }
 
                     if (searchError != null) Text(searchError!!, color = MaterialTheme.colorScheme.error)
-
                     searchResult?.let { u ->
                         val canAdd = u.uid.isNotBlank() && u.uid != myUid && !friendUids.contains(u.uid)
                         UserCard(
@@ -98,7 +96,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            // --- INCOMING REQUESTS ---
+            // INCOMING REQUESTS
             if (incoming.isNotEmpty()) {
                 item { SectionTitle(stringResource(R.string.friends_section_incoming), color = FriendRequestColor) }
                 item {
@@ -120,14 +118,14 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
                 }
             }
 
-            // --- OUTGOING REQUESTS --- (Width tightened so Cancel isn't too far)
+            // OUTGOING REQUESTS
             if (outgoing.isNotEmpty()) {
                 item { SectionTitle(stringResource(R.string.friends_section_outgoing), color = FriendRequestColor) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(outgoing) { item ->
                             Card(
-                                modifier = Modifier.width(200.dp),
+                                modifier = Modifier.width(200.dp), //Width tightened so Cancel isn't too far
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(
@@ -180,7 +178,7 @@ fun FriendsScreen(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    // --- DIALOGS ---
+    // DIALOGS
     userToRemove?.let { user ->
         AlertDialog(
             onDismissRequest = { userToRemove = null },

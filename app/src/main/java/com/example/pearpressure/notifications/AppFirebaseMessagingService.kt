@@ -130,7 +130,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.example.pearpressure.R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setContentIntent(pendingIntent)

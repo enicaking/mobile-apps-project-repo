@@ -95,7 +95,7 @@ object CounterNotificationHelper {
         )
 
         val notification = NotificationCompat.Builder(context, NotificationUtils.HEADS_UP_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.example.pearpressure.R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setContentIntent(pendingIntent)

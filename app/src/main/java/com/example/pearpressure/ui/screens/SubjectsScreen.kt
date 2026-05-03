@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.pearpressure.R
 import com.example.pearpressure.data.Subject
-import androidx.annotation.StringRes
 
 @Composable
 fun SubjectsScreen(

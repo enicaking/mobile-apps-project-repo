@@ -6,9 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Whatshot //FOR STREAK
-import androidx.compose.material.icons.filled.Star //FOR BADGES
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

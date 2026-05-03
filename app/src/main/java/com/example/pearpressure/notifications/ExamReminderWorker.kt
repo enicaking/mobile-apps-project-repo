@@ -51,7 +51,6 @@ class ExamReminderWorker(
         } else {
             "Exam tomorrow: $examTitle"
         }
-
         val body = if (isExamFinished) {
             "Add your expected grade for $examTitle"
         } else {
@@ -79,7 +78,7 @@ class ExamReminderWorker(
         }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.example.pearpressure.R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

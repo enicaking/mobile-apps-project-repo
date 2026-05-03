@@ -53,7 +53,7 @@ private enum class BoostType(val label: String) {
     ENERGETI("Energeti")
 }
 
-// ── Public entry point (previously StopwatchPage) ────────────────────────────
+// Public entry point (previously StopwatchPage) ────────────────────────────
 
 @Composable
 fun StopwatchPage(
@@ -123,7 +123,7 @@ fun StopwatchPage(
     }
 }
 
-// ── Internal stopwatch body (previously StopwatchScreen in the same package) ─
+//Internal stopwatch body (previously StopwatchScreen in the same package) ─
 
 @Composable
 fun StopwatchScreen(
@@ -733,7 +733,7 @@ private fun ParticipantStudyCard(
     }
 }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+//  Private helpers ───────────────────────────────────────────────────────────
 
 private fun formatDuration(ms: Long): String {
     val totalSeconds = ms / 1000

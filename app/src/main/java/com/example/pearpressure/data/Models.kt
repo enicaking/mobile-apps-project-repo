@@ -1,19 +1,18 @@
 package com.example.pearpressure.data
 
 import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.Exclude
 
 data class Subject(
-    @DocumentId val id: String = "", // Firebase pondrá aquí el ID del documento automáticamente
-    var ownerId: String = "", // Nuevo: ID del usuario que la creo
+    @DocumentId val id: String = "", // Firebase will put here the ID of document automatically
+    var ownerId: String = "", //ID of user that created it
     var name: String = "",
-    var members: List<String> = emptyList() // Lista de UIDs de los que se han unido(non owner users)
+    var members: List<String> = emptyList() // List of UIDs of users that joined(non owner users)
 )
 
 data class Exam(
-    @DocumentId val id: String = "", // Firebase pondrá aquí el ID del documento automáticamente
+    @DocumentId val id: String = "", // Firebase puts here ID of document automatically
     var subjectId: String = "",
-    var ownerId: String = "", //Para filtrar exámenes por usuario
+    var ownerId: String = "", //to filter exams by user
     var title: String = "",
     var endsAtEpochMs: Long = 0L,
 
@@ -37,7 +36,7 @@ data class UserProfile(
 )
 
 data class FriendRequest(
-    @DocumentId val id: String = "",   // docId (lo usaremos como fromUid_toUid)
+    @DocumentId val id: String = "",   // docId (used as fromUid_toUid)
     var fromUid: String = "",
     var toUid: String = "",
     var status: String = "pending",    // pending | accepted | declined
@@ -56,8 +55,8 @@ data class Session(
     var durationMs: Long = 0L,
     var createdAtEpochMs: Long = 0L,
     //counters for rankings and statistics
-    var waterCount: Int = 0,      // ml de agua
-    var coffeeCount: Int = 0,     // cantidad de cafés
-    var energyDrinkCount: Int = 0, // cantidad de bebidas energéticas
-    var bathroomBreaks: Int = 0    // cantidad de veces al baño (poop)
+    var waterCount: Int = 0,      // ml water
+    var coffeeCount: Int = 0,     // nº coffees
+    var energyDrinkCount: Int = 0, // nº evergy drinks
+    var bathroomBreaks: Int = 0    // poop
 )

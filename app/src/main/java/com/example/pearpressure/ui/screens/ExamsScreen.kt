@@ -21,8 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -72,7 +70,6 @@ fun ExamsScreen(
 
     // State for editing an existing exam
     var examToEdit by remember { mutableStateOf<Exam?>(null) }
-
     var examForResults by remember { mutableStateOf<Exam?>(null) }
     LaunchedEffect(initialPostExamId, exams) {
         if (!initialPostExamId.isNullOrBlank()) {
@@ -82,12 +79,9 @@ fun ExamsScreen(
     var expectedInput by remember { mutableStateOf("") }
     var sleepInput by remember { mutableStateOf("") }
     var actualInput by remember { mutableStateOf("") }
-
     // Internal state to toggle between "View/Success" and stringResource(R.string.edit) mode when finished
     var isEditingFinishedExam by remember { mutableStateOf(false) }
-
     var examToDelete by remember { mutableStateOf<Exam?>(null) }
-
     // maximum exam grade var so that it can be changed depends on exam, not just out of 10(but its still the base and assumed)
     var maxGradeInput by remember { mutableStateOf("10.0") }
 
