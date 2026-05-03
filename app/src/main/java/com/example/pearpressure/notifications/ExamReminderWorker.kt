@@ -15,7 +15,7 @@ import com.example.pearpressure.MainActivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import com.example.pearpressure.R
 class ExamReminderWorker(
     appContext: Context,
     params: WorkerParameters
@@ -78,7 +78,7 @@ class ExamReminderWorker(
         }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(com.example.pearpressure.R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

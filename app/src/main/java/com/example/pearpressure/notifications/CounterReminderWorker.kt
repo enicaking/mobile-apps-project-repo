@@ -49,7 +49,7 @@ class CounterReminderWorker(
             applicationContext,
             NotificationUtils.HEADS_UP_CHANNEL_ID
         )
-            .setSmallIcon(com.example.pearpressure.R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Water reminder")
             .setContentText("You have not drunk water recently. Remember, it is vital to drink enough water!")            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
