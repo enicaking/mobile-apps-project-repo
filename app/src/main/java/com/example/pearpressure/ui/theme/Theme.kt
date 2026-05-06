@@ -1,43 +1,14 @@
+/* Theme.kt
+This file combines design elements into a theme for the app */
 package com.example.pearpressure.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    tertiary = Tertiary,
-    onTertiary = OnTertiary,
-    background = Background,
-    onBackground = OnBackground,
-    surface = Surface,
-    onSurface = OnSurface
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    tertiary = Tertiary,
-    onTertiary = OnTertiary
-)
-
-/**
- * Theme.kt: puts together Color, Shapes and Type
- * contentReference[oaicite:7]{index=7}
- */
+// Custom green color scheme
 private val GreenColorScheme = lightColorScheme(
     primary = Color(0xFF89AC48),
     secondary = Color(0xFFC4DA70),

@@ -1,3 +1,5 @@
+/* Colors.kt
+This file designates the colors used throughout the app */
 package com.example.pearpressure.ui.theme
 
 import androidx.compose.ui.graphics.Color

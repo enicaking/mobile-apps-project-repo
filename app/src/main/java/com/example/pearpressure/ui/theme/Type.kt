@@ -1,3 +1,5 @@
+/* Type.kt
+This file designates the fonts used throughout the app */
 package com.example.pearpressure.ui.theme
 
 import androidx.compose.material3.Typography
@@ -6,7 +8,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Tipografías: estilos de texto reutilizables en toda la app.:contentReference[oaicite:5]{index=5}
+// Font app.:contentReference[oaicite:5]{index=5}
 val Typography = Typography(
     headlineSmall = TextStyle(
         fontFamily = FontFamily.Default,
