@@ -1,3 +1,5 @@
+/* TestApp.kt
+Handles screen navigation on the bottom bar */
 package com.example.pearpressure.ui
 
 import androidx.compose.material.icons.Icons

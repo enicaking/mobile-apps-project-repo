@@ -1,3 +1,5 @@
+/* AppRoutes.kt
+This file defines the routes used throughout the app */
 package com.example.pearpressure.ui.navigation
 
 sealed class AppRoutes(val route: String) {

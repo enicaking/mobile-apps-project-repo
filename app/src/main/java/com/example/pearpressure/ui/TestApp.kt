@@ -1,3 +1,5 @@
+/* TestApp.kt
+Handles screen navigation and loads the screens */
 package com.example.pearpressure.ui
 
 import androidx.compose.foundation.layout.Box
