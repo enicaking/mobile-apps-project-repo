@@ -1,3 +1,5 @@
+/* FriendsScreen.kt
+Loads the friends list, incoming friend requests, and outgoing friend requests */
 package com.example.pearpressure.ui.screens
 
 import androidx.compose.foundation.layout.*

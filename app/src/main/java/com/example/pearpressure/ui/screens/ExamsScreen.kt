@@ -1,3 +1,5 @@
+/* ExamsScreen.kt
+Loads the exams, status, due date for a given subject */
 package com.example.pearpressure.ui.screens
 
 import com.example.pearpressure.data.UserProfile

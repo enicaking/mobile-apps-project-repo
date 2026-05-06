@@ -1,3 +1,5 @@
+/* SubjectsScreen.kt
+Loads the subjects and allows member control */
 package com.example.pearpressure.ui.screens
 
 import androidx.compose.foundation.clickable

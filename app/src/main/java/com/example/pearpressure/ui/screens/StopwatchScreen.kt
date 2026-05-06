@@ -1,3 +1,5 @@
+/* StopwatchScreen.kt
+Loads the stopwatch screen and is connected to sessions */
 package com.example.pearpressure.ui.screens
 
 import android.os.SystemClock

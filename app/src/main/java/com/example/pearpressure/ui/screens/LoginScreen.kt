@@ -1,3 +1,5 @@
+/* LoginScreen.kt
+Loads the sign in and sign up option */
 package com.example.pearpressure.ui.screens
 
 import androidx.compose.foundation.layout.*

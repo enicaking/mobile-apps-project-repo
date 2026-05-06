@@ -1,3 +1,5 @@
+/* ProfileScreen.kt
+Loads the profile, pear badge, and basic stats */
 package com.example.pearpressure.ui.screens
 
 import android.annotation.SuppressLint

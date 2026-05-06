@@ -1,3 +1,5 @@
+/* CompleteProfileScreen.kt
+After pressing sign up and filling in, this page makes you complete the profile */
 package com.example.pearpressure.ui.screens
 
 import android.app.DatePickerDialog

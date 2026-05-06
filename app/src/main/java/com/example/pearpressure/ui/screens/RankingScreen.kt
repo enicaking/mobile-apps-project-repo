@@ -1,3 +1,5 @@
+/* RankingScreen.kt
+Loads ranking and filters */
 package com.example.pearpressure.ui.screens
 
 import androidx.compose.foundation.layout.*
