@@ -1,3 +1,6 @@
+/* FirestoreRepository.kt
+This file controls the Firestore logic
+Allows users to add, modify, and delete from the database */
 package com.example.pearpressure.data
 
 import com.google.firebase.firestore.FirebaseFirestore

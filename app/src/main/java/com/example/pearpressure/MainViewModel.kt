@@ -1,3 +1,6 @@
+/* MainViewModel.kt
+This file handles Firestore logic
+Allows frontend to interact with backend via FirestoreRepository.kt  */
 package com.example.pearpressure
 
 import androidx.lifecycle.ViewModel
@@ -13,11 +16,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import com.example.pearpressure.notifications.AppFirebaseMessagingService
 
+// Ranking scope filter
 enum class RankingScope(val label: String) {
     TOTAL("All Time"),
     WEEKLY("This Week")
 }
 
+// Ranking page display
 data class RankingEntryUi(
     val uid: String,
     val userName: String,
@@ -34,22 +39,26 @@ data class RankingEntryUi(
     val currentStreak: Int = 0
 )
 
+// Incoming friend request
 data class IncomingFriendRequestUi(
     val request: FriendRequest,
     val from: UserProfile
 )
 
+// Outgoing friend request
 data class OutgoingFriendRequestUi(
     val request: FriendRequest,
     val to: UserProfile
 )
 
+// Exam ranking
 data class ExamParticipantUi(
     val uid: String,
     val displayName: String,
     val studiedTimeMs: Long
 )
 
+// Main logic
 class MainViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
@@ -130,6 +139,7 @@ class MainViewModel : ViewModel() {
     fun getCurrentUserId(): String = authRepo.currentUser?.uid ?: ""
     fun getCurrentUserEmail(): String = authRepo.currentUser?.email ?: "No email"
 
+    // Activate listeners
     private fun startListening(userId: String) {
         subjectsListeners.forEach { it.remove() }
         friendsListener?.remove()
@@ -157,6 +167,7 @@ class MainViewModel : ViewModel() {
         loadCurrentUserProfile()
     }
 
+    // Restart friends listener after change
     private fun startFriendsListeners(userId: String) {
         friendsListener?.remove()
         friendsListener = repo.listenFriends(userId) { friendUids ->
@@ -205,14 +216,9 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    // FCM
-    private fun fetchAndSaveFcmToken() {
-        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
-            saveFcmToken(token)
-        }
-    }
 
-    // Auth
+    // ── PROFILE ──────────────────────────────────────────
+    // Sign in with email and password
     fun signIn(email: String, pass: String, onSuccess: () -> Unit) = viewModelScope.launch {
         authRepo.signIn(email, pass)
             .onSuccess { user ->
@@ -226,6 +232,7 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+    // Sign up with email, password and more information
     fun signUp(email: String, pass: String, onProfileStepRequired: () -> Unit) = viewModelScope.launch {
         _error.value = null
 
@@ -240,6 +247,7 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+    // Sign out, end all listeners and reset values
     fun signOut(onSuccess: () -> Unit) {
         authRepo.signOut()
 
@@ -266,212 +274,7 @@ class MainViewModel : ViewModel() {
         onSuccess()
     }
 
-    // Exams / Subjects
-    fun loadExams(subjectId: String) {
-        examsListener?.remove()
-        examsListener = repo.listenToExams(subjectId) { _exams.value = it }
-    }
-
-    fun addSubject(name: String) = viewModelScope.launch {
-        val userId = authRepo.currentUser?.uid ?: return@launch
-        val cleaned = name.trim()
-        if (cleaned.isEmpty()) return@launch
-
-        repo.addSubject(Subject(name = cleaned, ownerId = userId))
-            .onFailure { _error.value = it.message }
-    }
-
-    fun addExam(subjectId: String, title: String, endsAtMs: Long, maxGrade: Double) = viewModelScope.launch {
-        val userId = authRepo.currentUser?.uid ?: return@launch
-        repo.addExam(
-            Exam(
-                subjectId = subjectId,
-                ownerId = userId,
-                title = title,
-                endsAtEpochMs = endsAtMs,
-                maxGrade = maxGrade
-            )
-        ).onFailure { _error.value = it.message }
-    }
-
-    fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
-
-    fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
-
-    fun loadExamParticipants(examId: String) = viewModelScope.launch {
-        val exam = _exams.value.firstOrNull { it.id == examId } ?: run {
-            _examParticipants.value = emptyList()
-            return@launch
-        }
-
-        val subject = _subjects.value.firstOrNull { it.id == exam.subjectId } ?: run {
-            _examParticipants.value = emptyList()
-            return@launch
-        }
-
-        val participantUids = (listOf(subject.ownerId) + subject.members)
-            .filter { it.isNotBlank() }
-            .distinct()
-
-        val examSessions = repo.getSessionsForExamsSync(listOf(examId))
-
-        repo.getUserProfilesByIds(participantUids)
-            .onSuccess { profiles ->
-                _examParticipants.value = profiles
-                    .map { profile ->
-                        val studiedMs = examSessions
-                            .filter { it.ownerId == profile.uid }
-                            .sumOf { it.durationMs }
-
-                        ExamParticipantUi(
-                            uid = profile.uid,
-                            displayName = profile.username.ifBlank {
-                                profile.fullName.ifBlank { profile.email }
-                            },
-                            studiedTimeMs = studiedMs
-                        )
-                    }
-                    .sortedByDescending { it.studiedTimeMs }
-            }
-            .onFailure { _error.value = it.message }
-    }
-
-    fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
-        val currentUserId = authRepo.currentUser?.uid ?: return@launch
-        if (subject.ownerId == currentUserId) {
-            repo.deleteSubject(subject.id).onFailure { _error.value = it.message }
-        } else {
-            repo.leaveSubject(subject.id, currentUserId).onFailure { _error.value = it.message }
-        }
-    }
-
-    fun addMemberToSubject(subjectId: String, userIdToAdd: String) = viewModelScope.launch {
-        repo.addMemberToSubject(subjectId, userIdToAdd)
-            .onFailure { _error.value = it.message }
-    }
-
-    fun deleteExam(examId: String) = viewModelScope.launch {
-        repo.deleteExam(examId).onFailure { _error.value = it.message }
-    }
-
-    // Ranking
-    fun selectRankingSubject(subjectId: String) {
-        _selectedRankingSubjectId.value = subjectId
-        loadExams(subjectId)
-        loadRanking(examId = null, scope = RankingScope.TOTAL)
-    }
-
-    // Study buddies
-    private fun refreshStudyBuddiesFromSubjects() = viewModelScope.launch {
-        val currentUid = authRepo.currentUser?.uid ?: return@launch
-
-        val allUids = _subjects.value
-            .flatMap { s -> listOf(s.ownerId) + s.members }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .filter { it != currentUid }
-
-        repo.getUserProfilesByIds(allUids)
-            .onSuccess { _studyBuddies.value = it }
-            .onFailure { _error.value = it.message }
-    }
-
-    // Friends actions
-    fun searchUserByEmail(email: String) = viewModelScope.launch {
-        _friendSearchError.value = null
-        _friendSearchResult.value = null
-
-        val cleaned = email.trim()
-        if (cleaned.isEmpty()) return@launch
-
-        repo.findUserByEmail(cleaned)
-            .onSuccess { user ->
-                if (user == null) _friendSearchError.value = "No user found with that email."
-                else _friendSearchResult.value = user
-            }
-            .onFailure { e ->
-                _friendSearchError.value = e.message ?: "Error searching user."
-            }
-    }
-
-    fun sendFriendRequest(toUid: String) = viewModelScope.launch {
-        val fromUid = authRepo.currentUser?.uid ?: return@launch
-        repo.sendFriendRequest(fromUid, toUid)
-            .onFailure { _error.value = it.message }
-    }
-
-    fun acceptRequest(request: FriendRequest) = viewModelScope.launch {
-        repo.acceptFriendRequest(request)
-            .onFailure { _error.value = it.message }
-    }
-
-    fun declineRequest(request: FriendRequest) = viewModelScope.launch {
-        repo.declineFriendRequest(request)
-            .onFailure { _error.value = it.message }
-    }
-
-    fun removeFriend(friendUid: String) = viewModelScope.launch {
-        val myUid = authRepo.currentUser?.uid ?: return@launch
-        repo.removeFriend(myUid, friendUid)
-            .onFailure { _error.value = it.message }
-    }
-
-    // Profile
-    fun loadCurrentUserProfile() {
-        val uid = authRepo.currentUser?.uid ?: return
-
-        viewModelScope.launch {
-            repo.getUserProfile(uid)
-                .onSuccess { profile ->
-                    if (profile != null) {
-                        val now = System.currentTimeMillis()
-                        val lastDate = profile.lastStudyDateMs
-
-                        // If the streak is broken, calculating visually if it should be 0(for how its seen in the profile)
-                        val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
-                        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDate }
-
-                        // We add a day to the last study
-                        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
-
-                        val isToday = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
-                                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
-
-                        // If its not today and yesterday either(as we already sum 1), STREAK IS 0
-                        val displayStreak = if (lastDate == 0L) 0
-                        else if (isSameDay(now, lastDate) || isNextDay(now, lastDate)) profile.currentStreak
-                        else 0
-
-                        //Updating the StateFlow with the profile, with the streak seen correctly
-                        _currentUserProfile.value = profile.copy(currentStreak = displayStreak)
-                    }
-                }
-        }
-    }
-
-    // Helpers to not repeat the code of calendar
-    private fun isSameDay(t1: Long, t2: Long): Boolean {
-        val cal1 = java.util.Calendar.getInstance().apply { timeInMillis = t1 }
-        val cal2 = java.util.Calendar.getInstance().apply { timeInMillis = t2 }
-        return cal1.get(java.util.Calendar.YEAR) == cal2.get(java.util.Calendar.YEAR) &&
-                cal1.get(java.util.Calendar.DAY_OF_YEAR) == cal2.get(java.util.Calendar.DAY_OF_YEAR)
-    }
-
-    private fun isNextDay(now: Long, last: Long): Boolean {
-        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = last }
-        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
-        return isSameDay(now, calLast.timeInMillis)
-    }
-    override fun onCleared() {
-        subjectsListeners.forEach { it.remove() }
-        examsListener?.remove()
-        friendsListener?.remove()
-        incomingReqListener?.remove()
-        outgoingReqListener?.remove()
-        sessionsListener?.remove()
-        super.onCleared()
-    }
-
+    // Complete user profile with inputs
     fun completeUserProfile(
         fullName: String,
         username: String,
@@ -539,6 +342,105 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+
+    // ── EXAMS/SUBJECTS ──────────────────────────────────────────
+    // Listen to exams for a subject
+    fun loadExams(subjectId: String) {
+        examsListener?.remove()
+        examsListener = repo.listenToExams(subjectId) { _exams.value = it }
+    }
+
+    // Add subject
+    fun addSubject(name: String) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+        val cleaned = name.trim()
+        if (cleaned.isEmpty()) return@launch
+
+        repo.addSubject(Subject(name = cleaned, ownerId = userId))
+            .onFailure { _error.value = it.message }
+    }
+
+    // Add exam
+    fun addExam(subjectId: String, title: String, endsAtMs: Long, maxGrade: Double) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+        repo.addExam(
+            Exam(
+                subjectId = subjectId,
+                ownerId = userId,
+                title = title,
+                endsAtEpochMs = endsAtMs,
+                maxGrade = maxGrade
+            )
+        ).onFailure { _error.value = it.message }
+    }
+
+    // Find subject by ID
+    fun getSubjectById(id: String): Subject? = _subjects.value.find { it.id == id }
+
+    // Find exam by ID
+    fun getExamById(id: String): Exam? = _exams.value.find { it.id == id }
+
+    // Load in exam participants
+    fun loadExamParticipants(examId: String) = viewModelScope.launch {
+        val exam = _exams.value.firstOrNull { it.id == examId } ?: run {
+            _examParticipants.value = emptyList()
+            return@launch
+        }
+
+        val subject = _subjects.value.firstOrNull { it.id == exam.subjectId } ?: run {
+            _examParticipants.value = emptyList()
+            return@launch
+        }
+
+        val participantUids = (listOf(subject.ownerId) + subject.members)
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        val examSessions = repo.getSessionsForExamsSync(listOf(examId))
+
+        repo.getUserProfilesByIds(participantUids)
+            .onSuccess { profiles ->
+                _examParticipants.value = profiles
+                    .map { profile ->
+                        val studiedMs = examSessions
+                            .filter { it.ownerId == profile.uid }
+                            .sumOf { it.durationMs }
+
+                        ExamParticipantUi(
+                            uid = profile.uid,
+                            displayName = profile.username.ifBlank {
+                                profile.fullName.ifBlank { profile.email }
+                            },
+                            studiedTimeMs = studiedMs
+                        )
+                    }
+                    .sortedByDescending { it.studiedTimeMs }
+            }
+            .onFailure { _error.value = it.message }
+    }
+
+    // Delete (owner) or leave (non-owner) subject
+    fun deleteOrLeaveSubject(subject: Subject) = viewModelScope.launch {
+        val currentUserId = authRepo.currentUser?.uid ?: return@launch
+        if (subject.ownerId == currentUserId) {
+            repo.deleteSubject(subject.id).onFailure { _error.value = it.message }
+        } else {
+            repo.leaveSubject(subject.id, currentUserId).onFailure { _error.value = it.message }
+        }
+    }
+
+    // Add member to subject (owner action)
+    fun addMemberToSubject(subjectId: String, userIdToAdd: String) = viewModelScope.launch {
+        repo.addMemberToSubject(subjectId, userIdToAdd)
+            .onFailure { _error.value = it.message }
+    }
+
+    // Delete exam
+    fun deleteExam(examId: String) = viewModelScope.launch {
+        repo.deleteExam(examId).onFailure { _error.value = it.message }
+    }
+
+    // Search for friends
     fun searchFriends(query: String) {
         val currentFriends = _friends.value
 
@@ -553,60 +455,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun saveExamResults(examId: String, expected: Double?, sleep: Double?, actual: Double?) = viewModelScope.launch {
-        val userId = authRepo.currentUser?.uid ?: return@launch
-        repo.updateExamStats(examId, userId, expected, sleep, actual)
-            .onSuccess {
-                // Trigger notification when actual grade is submitted
-                if (actual != null) {
-                    val subjectId = _selectedRankingSubjectId.value ?: ""
-                    // implement the actual broadcast logic in the service
-                    android.util.Log.d("PEAR_NOTIF", "Sofia: Broadcast to $subjectId that user $userId posted a grade")
-                }
-                loadCurrentUserProfile()
-                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
-            }
-            .onFailure { _error.value = it.message }
-    }
-
-    fun saveSession(
-        examId: String,
-        durationMs: Long,
-        water: Int = 0,
-        coffee: Int = 0,
-        energy: Int = 0,
-        bathroom: Int = 0
-    ) = viewModelScope.launch {
-        val userId = authRepo.currentUser?.uid ?: return@launch
-        val profile = _currentUserProfile.value ?: return@launch // We need the current profile
-
-        // 1. Calculating new streak
-        val newStreak = calculateNewStreak(profile.currentStreak, profile.lastStudyDateMs)
-
-        val session = Session(
-            ownerId = userId,
-            examId = examId,
-            durationMs = durationMs,
-            createdAtEpochMs = System.currentTimeMillis(),
-            waterCount = water,
-            coffeeCount = coffee,
-            energyDrinkCount = energy,
-            bathroomBreaks = bathroom
-        )
-
-        // 2. Saving session and updating profile(Streak and total time)
-        repo.addSession(session).onFailure { _error.value = it.message }
-
-        // method to upload streak and date
-        repo.updateUserStreakAndStats(userId, durationMs, newStreak, System.currentTimeMillis())
-            .onSuccess {
-                // RELOADS AUTOMATICALLY AFTER STUDYING
-                loadCurrentUserProfile() // Reload to see the fire in the UI
-                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
-            }
-            .onFailure { _error.value = it.message }
-    }
-
+    // Edit subject name
     fun updateSubjectName(subjectId: String, newName: String) = viewModelScope.launch {
         val cleaned = newName.trim()
         if (cleaned.isEmpty()) return@launch
@@ -615,6 +464,7 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+    // Update exam
     fun updateExam(examId: String, newTitle: String, newEndsAtMs: Long, newMaxGrade: Double) = viewModelScope.launch {
         val cleaned = newTitle.trim()
         if (cleaned.isEmpty()) return@launch
@@ -623,6 +473,31 @@ class MainViewModel : ViewModel() {
             .onFailure { _error.value = it.message }
     }
 
+
+    // ── RANKING ──────────────────────────────────────────
+    // Filter by subject
+    fun selectRankingSubject(subjectId: String) {
+        _selectedRankingSubjectId.value = subjectId
+        loadExams(subjectId)
+        loadRanking(examId = null, scope = RankingScope.TOTAL)
+    }
+
+    // Study buddies (members of a subject)
+    private fun refreshStudyBuddiesFromSubjects() = viewModelScope.launch {
+        val currentUid = authRepo.currentUser?.uid ?: return@launch
+
+        val allUids = _subjects.value
+            .flatMap { s -> listOf(s.ownerId) + s.members }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .filter { it != currentUid }
+
+        repo.getUserProfilesByIds(allUids)
+            .onSuccess { _studyBuddies.value = it }
+            .onFailure { _error.value = it.message }
+    }
+
+    // Load the entire ranking
     fun loadRanking(
         examId: String? = null,
         scope: RankingScope = RankingScope.TOTAL
@@ -693,7 +568,7 @@ class MainViewModel : ViewModel() {
                         }
                     }
 
-                    // Mantained the averages for the rest of the app
+                    // Maintained the averages for the rest of the app
                     val examsWithActual = relevantExams.filter { it.actualGrades.containsKey(userId) }
                     val avgActual = if (examsWithActual.isNotEmpty()) {
                         examsWithActual.map { normalize(it.actualGrades[userId], it.maxGrade) }.average()
@@ -732,6 +607,202 @@ class MainViewModel : ViewModel() {
             }
     }
 
+
+    // ── FRIENDS ──────────────────────────────────────────
+    // Search for a user by email
+    fun searchUserByEmail(email: String) = viewModelScope.launch {
+        _friendSearchError.value = null
+        _friendSearchResult.value = null
+
+        val cleaned = email.trim()
+        if (cleaned.isEmpty()) return@launch
+
+        repo.findUserByEmail(cleaned)
+            .onSuccess { user ->
+                if (user == null) _friendSearchError.value = "No user found with that email."
+                else _friendSearchResult.value = user
+            }
+            .onFailure { e ->
+                _friendSearchError.value = e.message ?: "Error searching user."
+            }
+    }
+
+    // Send a friend request
+    fun sendFriendRequest(toUid: String) = viewModelScope.launch {
+        val fromUid = authRepo.currentUser?.uid ?: return@launch
+        repo.sendFriendRequest(fromUid, toUid)
+            .onFailure { _error.value = it.message }
+    }
+
+    // Accept a friend request
+    fun acceptRequest(request: FriendRequest) = viewModelScope.launch {
+        repo.acceptFriendRequest(request)
+            .onFailure { _error.value = it.message }
+    }
+
+    // Decline a friend request
+    fun declineRequest(request: FriendRequest) = viewModelScope.launch {
+        repo.declineFriendRequest(request)
+            .onFailure { _error.value = it.message }
+    }
+
+    // Remove a friend
+    fun removeFriend(friendUid: String) = viewModelScope.launch {
+        val myUid = authRepo.currentUser?.uid ?: return@launch
+        repo.removeFriend(myUid, friendUid)
+            .onFailure { _error.value = it.message }
+    }
+
+    // ── PROFILE PAGE ──────────────────────────────────────────
+    // Load in the profile
+    fun loadCurrentUserProfile() {
+        val uid = authRepo.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            repo.getUserProfile(uid)
+                .onSuccess { profile ->
+                    if (profile != null) {
+                        val now = System.currentTimeMillis()
+                        val lastDate = profile.lastStudyDateMs
+
+                        // If the streak is broken, calculating visually if it should be 0(for how its seen in the profile)
+                        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDate }
+
+                        // We add a day to the last study
+                        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
+
+                        // If not today and yesterday either (as we already sum 1), STREAK resets to 0
+                        val displayStreak = if (lastDate == 0L) 0
+                        else if (isSameDay(now, lastDate) || isNextDay(now, lastDate)) profile.currentStreak
+                        else 0
+
+                        //Updating the StateFlow with the profile, with the streak seen correctly
+                        _currentUserProfile.value = profile.copy(currentStreak = displayStreak)
+                    }
+                }
+        }
+    }
+
+
+    // ── AUXILIARY FUNCTIONS ──────────────────────────────────────────
+    // Helpers to not repeat the code of calendar
+    private fun isSameDay(t1: Long, t2: Long): Boolean {
+        val cal1 = java.util.Calendar.getInstance().apply { timeInMillis = t1 }
+        val cal2 = java.util.Calendar.getInstance().apply { timeInMillis = t2 }
+        return cal1.get(java.util.Calendar.YEAR) == cal2.get(java.util.Calendar.YEAR) &&
+                cal1.get(java.util.Calendar.DAY_OF_YEAR) == cal2.get(java.util.Calendar.DAY_OF_YEAR)
+    }
+
+    // Helpers to not repeat the code of calendar
+    private fun isNextDay(now: Long, last: Long): Boolean {
+        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = last }
+        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        return isSameDay(now, calLast.timeInMillis)
+    }
+    override fun onCleared() {
+        subjectsListeners.forEach { it.remove() }
+        examsListener?.remove()
+        friendsListener?.remove()
+        incomingReqListener?.remove()
+        outgoingReqListener?.remove()
+        sessionsListener?.remove()
+        super.onCleared()
+    }
+
+
+    // ── SESSIONS ───────────────────────────────────────────────
+    // Log exam results
+    fun saveExamResults(examId: String, expected: Double?, sleep: Double?, actual: Double?) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+        repo.updateExamStats(examId, userId, expected, sleep, actual)
+            .onSuccess {
+                // Trigger notification when actual grade is submitted
+                if (actual != null) {
+                    val subjectId = _selectedRankingSubjectId.value ?: ""
+                    // implement the actual broadcast logic in the service
+                    android.util.Log.d("PEAR_NOTIF", "Sofia: Broadcast to $subjectId that user $userId posted a grade")
+                }
+                loadCurrentUserProfile()
+                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
+            }
+            .onFailure { _error.value = it.message }
+    }
+
+    // Save a session
+    fun saveSession(
+        examId: String,
+        durationMs: Long,
+        water: Int = 0,
+        coffee: Int = 0,
+        energy: Int = 0,
+        bathroom: Int = 0
+    ) = viewModelScope.launch {
+        val userId = authRepo.currentUser?.uid ?: return@launch
+        val profile = _currentUserProfile.value ?: return@launch // We need the current profile
+
+        // 1. Calculating new streak
+        val newStreak = calculateNewStreak(profile.currentStreak, profile.lastStudyDateMs)
+
+        val session = Session(
+            ownerId = userId,
+            examId = examId,
+            durationMs = durationMs,
+            createdAtEpochMs = System.currentTimeMillis(),
+            waterCount = water,
+            coffeeCount = coffee,
+            energyDrinkCount = energy,
+            bathroomBreaks = bathroom
+        )
+
+        // 2. Saving session and updating profile(Streak and total time)
+        repo.addSession(session).onFailure { _error.value = it.message }
+
+        // method to upload streak and date
+        repo.updateUserStreakAndStats(userId, durationMs, newStreak, System.currentTimeMillis())
+            .onSuccess {
+                // RELOADS AUTOMATICALLY AFTER STUDYING
+                loadCurrentUserProfile() // Reload to see the fire in the UI
+                loadRanking(_selectedRankingSubjectId.value, RankingScope.TOTAL)
+            }
+            .onFailure { _error.value = it.message }
+    }
+
+    // Calculate streak in-app
+    private fun calculateNewStreak(currentStreak: Int, lastDateMs: Long): Int {
+        if (lastDateMs == 0L) return 1 // First time that you study in day
+
+        val now = System.currentTimeMillis()
+        val dayMs = 24 * 60 * 60 * 1000L
+
+        // We use Calendar to compare a natural day (not just exactly 24 hours)
+        val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
+        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDateMs }
+
+        val isSameDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
+
+        // Its the next day if the difference of the calendar is 1 day
+        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        val isNextDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
+
+        return when {
+            isSameDay -> currentStreak // Already studied today so keep streak
+            isNextDay -> currentStreak + 1 // Streak +1 day
+            else -> 1 // More than 48h passed, streak lost. go back to 1
+        }
+    }
+
+
+    // ── NOTIFICATIONS ──────────────────────────────────────────
+    // FCM token to signal change in database
+    private fun fetchAndSaveFcmToken() {
+        AppFirebaseMessagingService.fetchCurrentFcmToken { token ->
+            saveFcmToken(token)
+        }
+    }
+
+    // Trigger notification for study_event
     fun notifyStudyStarted(
         subjectId: String,
         subjectName: String,
@@ -765,6 +836,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    // Save FCM token
     fun saveFcmToken(token: String) {
         val currentUser = auth.currentUser ?: run {
             android.util.Log.d("FCM", "No authenticated user, token not saved")
@@ -792,33 +864,4 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-
-
-
-    //CALCULATE STREAK FUNCTION
-    private fun calculateNewStreak(currentStreak: Int, lastDateMs: Long): Int {
-        if (lastDateMs == 0L) return 1 // First time that you study in day
-
-        val now = System.currentTimeMillis()
-        val dayMs = 24 * 60 * 60 * 1000L
-
-        // We use Calendar to compare a natural day (not just exactly 24 hours)
-        val calNow = java.util.Calendar.getInstance().apply { timeInMillis = now }
-        val calLast = java.util.Calendar.getInstance().apply { timeInMillis = lastDateMs }
-
-        val isSameDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
-                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
-
-        // Its the next day if the difference of the calendar is 1 day
-        calLast.add(java.util.Calendar.DAY_OF_YEAR, 1)
-        val isNextDay = calNow.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
-                calNow.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR)
-
-        return when {
-            isSameDay -> currentStreak // Already studied today so keep streak
-            isNextDay -> currentStreak + 1 // Streak +1 day
-            else -> 1 // More than 48h passed, streak lost. go back to 1
-        }
-    }
-
 }

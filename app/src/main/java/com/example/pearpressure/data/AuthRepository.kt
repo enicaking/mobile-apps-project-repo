@@ -1,3 +1,6 @@
+/* AuthRepository.kt
+This file controls the Firebase Auth logic
+Allows users to securely sign in or sign up */
 package com.example.pearpressure.data
 
 import com.google.firebase.auth.FirebaseAuth

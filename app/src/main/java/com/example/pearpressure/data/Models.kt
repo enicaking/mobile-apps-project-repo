@@ -1,22 +1,25 @@
+/* Models.kt
+This file contains the structure of the Firestore database */
+
 package com.example.pearpressure.data
 
 import com.google.firebase.firestore.DocumentId
 
 data class Subject(
-    @DocumentId val id: String = "", // Firebase will put here the ID of document automatically
+    @DocumentId val id: String = "", // Automatically generated
     var ownerId: String = "", //ID of user that created it
     var name: String = "",
-    var members: List<String> = emptyList() // List of UIDs of users that joined(non owner users)
+    var members: List<String> = emptyList() // List of UIDs of users that joined (non owner users)
 )
 
 data class Exam(
-    @DocumentId val id: String = "", // Firebase puts here ID of document automatically
+    @DocumentId val id: String = "", // Automatically generated
     var subjectId: String = "",
-    var ownerId: String = "", //to filter exams by user
+    var ownerId: String = "",
     var title: String = "",
     var endsAtEpochMs: Long = 0L,
 
-    //ADDED FOR EXPECTED GRADE, REAL GRADE, SLEEPING HOURS
+    // Added after the exam has finished
     var expectedGrades: Map<String, Double> = emptyMap(),
     var actualGrades: Map<String, Double> = emptyMap(),
     var sleepHours: Map<String, Double> = emptyMap(),
@@ -55,10 +58,10 @@ data class Session(
     var durationMs: Long = 0L,
     var createdAtEpochMs: Long = 0L,
     //counters for rankings and statistics
-    var waterCount: Int = 0,      // ml water
-    var coffeeCount: Int = 0,     // nº coffees
-    var energyDrinkCount: Int = 0, // nº evergy drinks
-    var bathroomBreaks: Int = 0    // poop
+    var waterCount: Int = 0,        // ml water
+    var coffeeCount: Int = 0,       // nº coffees
+    var energyDrinkCount: Int = 0,  // nº energy drinks
+    var bathroomBreaks: Int = 0     // nº poop
 )
 
 data class StudyEvent(

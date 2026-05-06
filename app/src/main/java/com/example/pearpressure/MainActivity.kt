@@ -1,3 +1,6 @@
+/* MainActivity.kt
+This file handles app logic
+Allows frontend to load in with UI and handles notifications  */
 package com.example.pearpressure
 
 import android.os.Bundle
@@ -30,12 +33,8 @@ class MainActivity : ComponentActivity() {
             viewModel.saveFcmToken(token)
         }
 
-
-        setContent {
-            TestTheme() {
-                TestApp( )
-            }
-        }
+        // Using custom defined green theme
+        setContent { TestTheme() { TestApp( ) } }
     }
 
     private fun requestPostNotificationsPermissionIfNeeded() {
