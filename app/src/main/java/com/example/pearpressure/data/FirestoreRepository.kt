@@ -5,15 +5,15 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
-import com.example.pearpressure.data.StudyEvent
-import kotlinx.coroutines.tasks.await
 
 class FirestoreRepository {
 
     private val db: FirebaseFirestore = Firebase.firestore
     private val firestore = FirebaseFirestore.getInstance()
-    // ── SUBJECTS ──────────────────────────────────────────
 
+    // ── SUBJECTS/EXAMS ──────────────────────────────────────────
+
+    // Create a subject as the owner
     suspend fun addSubject(subject: Subject): Result<Unit> = runCatching {
         // If subject.id is empty, Firestore will generate one.
         // If it has one (e.g. from @DocumentId), it will use it.
@@ -29,13 +29,7 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun getSubjects(): Result<List<Subject>> = runCatching {
-        db.collection("subjects")
-            .get()
-            .await()
-            .toObjects(Subject::class.java)
-    }
-
+    // Cascade delete subject and nested exams
     suspend fun deleteSubject(subjectId: String): Result<Unit> = runCatching {
         val batch = db.batch()
 
@@ -56,7 +50,7 @@ class FirestoreRepository {
         batch.commit().await()
     }
 
-    //LEAVE, for the non owner users of a subject
+    // Leave a subject for the non-owner members
     suspend fun leaveSubject(subjectId: String, userId: String): Result<Unit> = runCatching {
         // Usamos FieldValue.arrayRemove para quitar el ID del usuario de la lista de miembros
         db.collection("subjects").document(subjectId)
@@ -65,8 +59,7 @@ class FirestoreRepository {
         Unit
     }
 
-    // ── EXAMS ─────────────────────────────────────────────
-
+    // Add exam to a subject you own
     suspend fun addExam(exam: Exam): Result<Unit> = runCatching {
         if (exam.id.isEmpty()) {
             val docRef = db.collection("exams").document()
@@ -80,14 +73,7 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun getExamsForSubject(subjectId: String): Result<List<Exam>> = runCatching {
-        db.collection("exams")
-            .whereEqualTo("subjectId", subjectId)
-            .get()
-            .await()
-            .toObjects(Exam::class.java)
-    }
-
+    // Delete an exam
     suspend fun deleteExam(examId: String): Result<Unit> = runCatching {
         db.collection("exams")
             .document(examId)
@@ -95,6 +81,7 @@ class FirestoreRepository {
             .await()
     }
 
+    // Add friend to a subject as the owner
     suspend fun addMemberToSubject(subjectId: String, userId: String): Result<Unit> = runCatching {
         db.collection("subjects")
             .document(subjectId)
@@ -102,54 +89,16 @@ class FirestoreRepository {
             .await()
     }
 
-    // ── REAL-TIME LISTENERS ───────────────────────────────
-
-    // Subject listener
-    fun listenToSubjects(userId: String, onChange: (List<Subject>) -> Unit): ListenerRegistration {
-        return db.collection("subjects")
-            .whereEqualTo("ownerId", userId) //Only the owner
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
-                onChange(snapshot.toObjects(Subject::class.java))
-            }
-    }
-
+    // Exam listener
     fun listenToExams(subjectId: String, onChange: (List<Exam>) -> Unit): ListenerRegistration {
         return db.collection("exams")
-            .whereEqualTo("subjectId", subjectId) //ESTO es lo que filtra por asignatura
+            .whereEqualTo("subjectId", subjectId) // Filter for subject
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
                 onChange(snapshot.toObjects(Exam::class.java))
             }
     }
 
-    suspend fun createUserProfile(user: UserProfile) = runCatching {
-        db.collection("users").document(user.uid).set(user).await()
-    }  //for storing when creating user
-
-    suspend fun isUsernameAvailable(username: String): Result<Boolean> = runCatching {
-        val normalized = username.trim().lowercase()
-
-        val snapshot = db.collection("users")
-            .whereEqualTo("username", normalized)
-            .get()
-            .await()
-
-        snapshot.isEmpty
-    }
-
-    suspend fun saveCompletedUserProfile(user: UserProfile): Result<Unit> = runCatching {
-        val normalizedUser = user.copy(username = user.username.trim().lowercase())
-        db.collection("users")
-            .document(user.uid)
-            .set(normalizedUser, com.google.firebase.firestore.SetOptions.merge())
-            .await()
-    }
-
-
-    // ── SUBJECTS (owner OR member) ──────────────────────────
-    // Separate listener for owners and members
-    // ViewModel saves state and closes
     fun listenToSubjectsForUser(
         userId: String,
         onChange: (List<Subject>) -> Unit
@@ -181,8 +130,34 @@ class FirestoreRepository {
         return listOf(l1, l2)
     }
 
+
+    // ── PROFILE ───────────────────────────────
+
+    // Check for unique username
+    suspend fun isUsernameAvailable(username: String): Result<Boolean> = runCatching {
+        val normalized = username.trim().lowercase()
+
+        val snapshot = db.collection("users")
+            .whereEqualTo("username", normalized)
+            .get()
+            .await()
+
+        snapshot.isEmpty
+    }
+
+    // Create new user
+    suspend fun saveCompletedUserProfile(user: UserProfile): Result<Unit> = runCatching {
+        val normalizedUser = user.copy(username = user.username.trim().lowercase())
+        db.collection("users")
+            .document(user.uid)
+            .set(normalizedUser, com.google.firebase.firestore.SetOptions.merge())
+            .await()
+    }
+
+
     // ── USERS ───────────────────────────────────────────────
 
+    // Get user profile by ID
     suspend fun getUserProfile(uid: String): Result<UserProfile?> = runCatching {
         db.collection("users")
             .document(uid)
@@ -191,6 +166,7 @@ class FirestoreRepository {
             .toObject(UserProfile::class.java)
     }
 
+    // Get user profiles by ID
     suspend fun getUserProfilesByIds(uids: List<String>): Result<List<UserProfile>> = runCatching {
         if (uids.isEmpty()) return@runCatching emptyList<UserProfile>()
 
@@ -209,6 +185,7 @@ class FirestoreRepository {
         result
     }
 
+    // Get user profile by email for adding as friends
     suspend fun findUserByEmail(email: String): Result<UserProfile?> = runCatching {
         val snap = db.collection("users")
             .whereEqualTo("email", email.trim())
@@ -219,8 +196,10 @@ class FirestoreRepository {
         snap.documents.firstOrNull()?.toObject(UserProfile::class.java)
     }
 
+
     // ── FRIENDS / REQUESTS ─────────────────────────────────────────────
 
+    // Listener for friends
     fun listenFriends(friendOwnerUid: String, onChange: (List<String>) -> Unit): ListenerRegistration {
         return db.collection("users")
             .document(friendOwnerUid)
@@ -232,6 +211,7 @@ class FirestoreRepository {
             }
     }
 
+    // Listener for incoming friend requests
     fun listenIncomingFriendRequests(
         myUid: String,
         onChange: (List<FriendRequest>) -> Unit
@@ -245,6 +225,7 @@ class FirestoreRepository {
             }
     }
 
+    // Listener for outgoing friend requests
     fun listenOutgoingFriendRequests(
         myUid: String,
         onChange: (List<FriendRequest>) -> Unit
@@ -258,6 +239,7 @@ class FirestoreRepository {
             }
     }
 
+    // Once email is searched, send outgoing friend request
     suspend fun sendFriendRequest(fromUid: String, toUid: String): Result<Unit> = runCatching {
         require(fromUid.isNotBlank() && toUid.isNotBlank()) { "Missing uid" }
         require(fromUid != toUid) { "You cannot add yourself" }
@@ -286,6 +268,7 @@ class FirestoreRepository {
             .await()
     }
 
+    // Accept incoming friend request
     suspend fun acceptFriendRequest(request: FriendRequest): Result<Unit> = runCatching {
         val fromUid = request.fromUid
         val toUid = request.toUid
@@ -314,6 +297,7 @@ class FirestoreRepository {
         batch.commit().await()
     }
 
+    // Decline incoming friend request
     suspend fun declineFriendRequest(request: FriendRequest): Result<Unit> = runCatching {
         val fromUid = request.fromUid
         val toUid = request.toUid
@@ -325,6 +309,7 @@ class FirestoreRepository {
             .await()
     }
 
+    // Remove someone from being your friend
     suspend fun removeFriend(myUid: String, friendUid: String): Result<Unit> = runCatching {
         val batch = db.batch()
 
@@ -341,8 +326,10 @@ class FirestoreRepository {
 
 
     // ── SESSIONS ───────────────────────────────────────────────
+
+    // Record a session under a specific user and exam
     suspend fun addSession(session: Session): Result<Unit> = runCatching {
-        // Generate a clean document reference
+
         val docRef = db.collection("sessions").document()
 
         // Create a copy that includes the generated ID so the document
@@ -354,15 +341,7 @@ class FirestoreRepository {
 
     }
 
-
-    suspend fun getSessionsForUser(userId: String): Result<List<Session>> = runCatching {
-        db.collection("sessions")
-            .whereEqualTo("ownerId", userId)
-            .get()
-            .await()
-            .toObjects(Session::class.java)
-    }
-
+    // Aggregate all sessions for a user
     fun listenToSessionsForUser(
         userId: String,
         onChange: (List<Session>) -> Unit
@@ -375,8 +354,10 @@ class FirestoreRepository {
             }
     }
 
+
     // ── STATS & RANKING UPDATES  ──────────────────
 
+    // Update exam stats for a specific user
     suspend fun updateExamStats(
         examId: String,
         userId: String,
@@ -394,12 +375,6 @@ class FirestoreRepository {
         updates["actualGrades.$userId"] = actual ?: com.google.firebase.firestore.FieldValue.delete()
 
         docRef.update(updates).await()
-    }
-
-    suspend fun updateUserTotalStudyTime(userId: String, durationMs: Long): Result<Unit> = runCatching {
-        db.collection("users").document(userId)
-            .update("totalStudyTime", com.google.firebase.firestore.FieldValue.increment(durationMs))
-            .await()
     }
 
     // Edit subjects and exams
@@ -428,8 +403,6 @@ class FirestoreRepository {
         }
     }
 
-    // ── RANKING ──────────────────────────────────
-
     // Gets all exams for a specific subject (for Accuracy/Efficiency rankings)
     suspend fun getExamsBySubjectSync(subjectId: String): List<Exam> = try {
         db.collection("exams")
@@ -456,6 +429,7 @@ class FirestoreRepository {
         }
     } catch (e: Exception) { emptyList() }
 
+    // Add study event and trigger notification
     suspend fun addStudyEvent(event: StudyEvent) {
         firestore.collection("study_events")
             .add(event)
@@ -463,7 +437,8 @@ class FirestoreRepository {
     }
 
 
-    // STREAKS & STATS UPDATES
+    // ──── STREAKS & STATS UPDATES ──────────────
+
     // Update total time, streak and last session date
     suspend fun updateUserStreakAndStats(
         userId: String,
@@ -478,12 +453,5 @@ class FirestoreRepository {
             "lastStudyDateMs" to lastDateMs
         )
         docRef.update(updates).await()
-    }
-
-    // Resets streak to 0 once 48 hours have passed.
-    suspend fun resetUserStreak(userId: String): Result<Unit> = runCatching {
-        db.collection("users").document(userId)
-            .update("currentStreak", 0)
-            .await()
     }
 }
